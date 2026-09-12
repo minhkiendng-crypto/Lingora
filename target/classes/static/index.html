@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lingora - Học tiếng Anh</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- =====================================================
+     WELCOME
+===================================================== -->
+
+<section id="welcomeScreen" class="screen active">
+
+```
+<div class="welcome-box">
+
+    <div class="lingora-mascot">
+        <div class="mascot-face">
+            <div class="mascot-eye left"></div>
+            <div class="mascot-eye right"></div>
+            <div class="mascot-beak"></div>
+        </div>
+        <div class="mascot-body"></div>
+    </div>
+
+    <h1>🌳 Lingora</h1>
+
+    <p class="subtitle">
+        Học tiếng Anh theo cách của bạn
+    </p>
+
+    <button
+        class="primary-btn"
+        id="startButton"
+        onclick="startApp()">
+        🚀 Bắt đầu
+    </button>
+
+    <p class="small-text">
+        Học • Luyện tập • Tiến bộ • Giao tiếp
+    </p>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     GOAL
+===================================================== -->
+
+<section id="goalScreen" class="screen">
+
+```
+<div class="page-box">
+
+    <div class="top-title">
+
+        <div class="mini-mascot">
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+        </div>
+
+        <div>
+            <h2>🎯 Bạn học tiếng Anh để làm gì?</h2>
+            <p>Chọn mục tiêu phù hợp với bạn</p>
+        </div>
+
+    </div>
+
+
+    <div class="goal-grid">
+
+        <button
+            class="goal-card"
+            data-goal="communication"
+            onclick="selectGoal('communication')">
+
+            <span>💬</span>
+            <strong>Giao tiếp</strong>
+            <small>Nói chuyện tự tin</small>
+
+        </button>
+
+
+        <button
+            class="goal-card"
+            data-goal="travel"
+            onclick="selectGoal('travel')">
+
+            <span>🌍</span>
+            <strong>Du lịch</strong>
+            <small>Giao tiếp khi đi xa</small>
+
+        </button>
+
+
+        <button
+            class="goal-card"
+            data-goal="school"
+            onclick="selectGoal('school')">
+
+            <span>🏫</span>
+            <strong>Trường học</strong>
+            <small>Học tập và kiểm tra</small>
+
+        </button>
+
+
+        <button
+            class="goal-card"
+            data-goal="work"
+            onclick="selectGoal('work')">
+
+            <span>💼</span>
+            <strong>Công việc</strong>
+            <small>Tiếng Anh công việc</small>
+
+        </button>
+
+
+        <button
+            class="goal-card"
+            data-goal="entertainment"
+            onclick="selectGoal('entertainment')">
+
+            <span>🎬</span>
+            <strong>Giải trí</strong>
+            <small>Phim, nhạc và game</small>
+
+        </button>
+
+
+        <button
+            class="goal-card"
+            data-goal="study"
+            onclick="selectGoal('study')">
+
+            <span>📚</span>
+            <strong>Học tập</strong>
+            <small>Nâng cao kiến thức</small>
+
+        </button>
+
+    </div>
+
+
+    <button
+        class="primary-btn"
+        id="goalContinue"
+        disabled
+        onclick="goToInfo()">
+
+        Tiếp tục →
+
+    </button>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     LEVEL / INFO
+===================================================== -->
+
+<section id="infoScreen" class="screen">
+
+```
+<div class="page-box">
+
+    <div class="top-title">
+
+        <div class="mini-mascot">
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+        </div>
+
+        <div>
+            <h2>📊 Trình độ hiện tại của bạn?</h2>
+            <p>Hãy chọn mức gần đúng nhất</p>
+        </div>
+
+    </div>
+
+
+    <p class="description">
+        Lingora sẽ kiểm tra lại bằng bài kiểm tra đầu vào 30 câu.
+    </p>
+
+
+    <div class="level-list">
+
+        <button
+            class="level-card"
+            onclick="chooseInfo('beginner')">
+
+            <span>🌱</span>
+
+            <div>
+                <strong>Tôi mới bắt đầu</strong>
+                <small>
+                    Chưa biết hoặc biết rất ít tiếng Anh
+                </small>
+            </div>
+
+        </button>
+
+
+        <button
+            class="level-card"
+            onclick="chooseInfo('basic')">
+
+            <span>🌿</span>
+
+            <div>
+                <strong>Tôi biết một chút</strong>
+                <small>
+                    Biết một số từ và câu cơ bản
+                </small>
+            </div>
+
+        </button>
+
+
+        <button
+            class="level-card"
+            onclick="chooseInfo('good')">
+
+            <span>🌳</span>
+
+            <div>
+                <strong>Tôi khá</strong>
+                <small>
+                    Đã có nền tảng tiếng Anh
+                </small>
+            </div>
+
+        </button>
+
+
+        <button
+            class="level-card"
+            onclick="chooseInfo('unknown')">
+
+            <span>❓</span>
+
+            <div>
+                <strong>Không chắc</strong>
+                <small>
+                    Hãy để Lingora kiểm tra
+                </small>
+            </div>
+
+        </button>
+
+    </div>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     PLACEMENT TEST - 30 QUESTIONS
+===================================================== -->
+
+<section id="testScreen" class="screen">
+
+```
+<div class="test-container">
+
+    <div class="test-header">
+
+        <button
+            class="back-btn"
+            onclick="goToInfo()">
+            ←
+        </button>
+
+
+        <div class="test-progress-box">
+
+            <div class="progress-bar">
+                <div
+                    id="testProgress"
+                    class="progress-fill">
+                </div>
+            </div>
+
+            <span>
+                Câu
+                <b id="testQuestionNumber">1</b>
+                /30
+            </span>
+
+        </div>
+
+
+        <div class="heart-display">
+            ❤️ <span id="testHearts">5</span>
+        </div>
+
+    </div>
+
+
+    <div class="question-box">
+
+        <span
+            class="question-topic"
+            id="testTopic">
+            Cơ bản
+        </span>
+
+
+        <h2 id="testQuestion">
+            Đang tải câu hỏi...
+        </h2>
+
+
+        <div
+            id="testAnswers"
+            class="answer-list">
+        </div>
+
+
+        <div
+            id="testExplanation"
+            class="explanation hidden">
+        </div>
+
+    </div>
+
+
+    <button
+        id="testNextButton"
+        class="primary-btn"
+        onclick="nextPlacementQuestion()"
+        disabled>
+
+        Tiếp tục →
+
+    </button>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     TEST RESULT
+===================================================== -->
+
+<section id="resultScreen" class="screen">
+
+```
+<div class="result-box">
+
+    <div class="result-icon">
+        🎉
+    </div>
+
+
+    <h1>
+        Hoàn thành bài kiểm tra!
+    </h1>
+
+
+    <p>
+        Điểm của bạn:
+    </p>
+
+
+    <div class="score-circle">
+
+        <span id="testScore">
+            0
+        </span>
+
+        <small>
+            /30
+        </small>
+
+    </div>
+
+
+    <h2 id="testLevel">
+        Đang xác định trình độ...
+    </h2>
+
+
+    <p id="testMessage">
+        Lingora đã phân tích kết quả của bạn.
+    </p>
+
+
+    <button
+        class="primary-btn"
+        onclick="finishTest()">
+
+        🌳 Bắt đầu học
+
+    </button>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     HOME / LEARNING TREE
+===================================================== -->
+
+<section id="homeScreen" class="screen">
+
+```
+<header class="app-header">
+
+    <div class="brand">
+
+        <div class="mini-mascot">
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+        </div>
+
+
+        <div>
+            <strong>Lingora</strong>
+            <small>🌳 Cây học tập</small>
+        </div>
+
+    </div>
+
+
+    <div class="stats">
+
+        <div class="stat">
+            ❤️ <span id="heartCount">5</span>
+        </div>
+
+        <div class="stat">
+            🔥 <span id="streakCount">0</span>
+        </div>
+
+        <div class="stat">
+            ⭐ <span id="xpCount">0</span>
+        </div>
+
+    </div>
+
+</header>
+
+
+<main class="home-content">
+
+    <div class="welcome-user">
+
+        <div>
+
+            <p>
+                Chào mừng bạn trở lại 👋
+            </p>
+
+            <h1>
+                🌳 Cây học tập
+            </h1>
+
+            <span id="goalText">
+                Chọn mục tiêu để bắt đầu
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="home-actions">
+
+        <button
+            class="action-card"
+            onclick="goHome()">
+
+            <span>🌳</span>
+            <strong>Học</strong>
+            <small>Tiếp tục hành trình</small>
+
+        </button>
+
+
+        <button
+            class="action-card"
+            onclick="showReview()">
+
+            <span>📖</span>
+            <strong>Ôn tập</strong>
+            <small>Ôn lại kiến thức</small>
+
+        </button>
+
+
+        <button
+            class="action-card"
+            onclick="goRanking()">
+
+            <span>🏆</span>
+            <strong>Bảng xếp hạng</strong>
+            <small>Xem thành tích</small>
+
+        </button>
+
+
+        <button
+            class="action-card"
+            onclick="goProfile()">
+
+            <span>👤</span>
+            <strong>Hồ sơ</strong>
+            <small>Tiến trình của bạn</small>
+
+        </button>
+
+    </div>
+
+
+    <div class="doors-section">
+
+        <div class="section-heading">
+
+            <div>
+                <h2>🚪 Hành trình học</h2>
+                <p>Khám phá từng cánh cửa</p>
+            </div>
+
+        </div>
+
+
+        <div
+            id="doorsContainer"
+            class="doors-container">
+        </div>
+
+    </div>
+
+</main>
+```
+
+</section>
+
+<!-- =====================================================
+     PART SCREEN
+===================================================== -->
+
+<section id="partScreen" class="screen">
+
+```
+<div class="part-container">
+
+    <button
+        class="back-btn"
+        onclick="goHome()">
+
+        ← Quay lại
+
+    </button>
+
+
+    <div class="part-header">
+
+        <div class="mini-mascot">
+
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+
+        </div>
+
+
+        <div>
+
+            <p id="partDoorTitle">
+                Cửa 1
+            </p>
+
+            <h1 id="partTitle">
+                Phần 1
+            </h1>
+
+            <p id="partDescription">
+                Học những kiến thức cơ bản
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div
+        id="partsContainer"
+        class="parts-container">
+    </div>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     LESSON
+===================================================== -->
+
+<section id="lessonScreen" class="screen">
+
+```
+<div class="lesson-container">
+
+    <header class="lesson-header">
+
+        <button
+            class="back-btn"
+            onclick="exitLesson()">
+
+            ✕
+
+        </button>
+
+
+        <div class="lesson-progress-box">
+
+            <div class="progress-bar">
+
+                <div
+                    id="lessonProgress"
+                    class="progress-fill">
+                </div>
+
+            </div>
+
+
+            <span>
+                Câu
+                <b id="lessonQuestionNumber">1</b>
+                /
+                <b id="lessonQuestionTotal">10</b>
+            </span>
+
+        </div>
+
+
+        <div class="heart-display">
+
+            ❤️
+            <span id="lessonHearts">
+                5
+            </span>
+
+        </div>
+
+    </header>
+
+
+    <div class="lesson-location">
+
+        <span>
+            🚪 Cửa
+            <b id="currentDoorNumber">1</b>
+        </span>
+
+        <span>•</span>
+
+        <span>
+            📚 Phần
+            <b id="currentPartNumber">1</b>
+        </span>
+
+        <span>•</span>
+
+        <span>
+            📝 Bài
+            <b id="currentLessonNumber">1</b>
+        </span>
+
+    </div>
+
+
+    <main class="lesson-main">
+
+        <div class="lesson-mascot">
+
+            <div class="mini-mascot">
+
+                <div class="mini-face">
+                    <span></span>
+                    <span></span>
+                    <i></i>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <span
+            id="lessonType"
+            class="question-topic">
+
+            Từ vựng
+
+        </span>
+
+
+        <h1 id="lessonQuestion">
+            Đang tải...
+        </h1>
+
+
+        <div
+            id="lessonAnswers"
+            class="answer-list">
+        </div>
+
+
+        <div
+            id="lessonExplanation"
+            class="explanation hidden">
+        </div>
+
+    </main>
+
+
+    <div class="lesson-bottom">
+
+        <div
+            id="lessonFeedback"
+            class="feedback hidden">
+        </div>
+
+
+        <button
+            id="lessonNextButton"
+            class="primary-btn"
+            onclick="nextLessonQuestion()"
+            disabled>
+
+            Kiểm tra
+
+        </button>
+
+    </div>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     LESSON COMPLETE
+===================================================== -->
+
+<section id="lessonCompleteScreen" class="screen">
+
+```
+<div class="complete-box">
+
+    <div class="complete-icon">
+        🎉
+    </div>
+
+
+    <h1>
+        Hoàn thành bài!
+    </h1>
+
+
+    <p>
+        Bạn đã hoàn thành:
+    </p>
+
+
+    <div class="complete-info">
+
+        <div>
+            🚪 Cửa
+            <strong id="completedDoorNumber">
+                1
+            </strong>
+        </div>
+
+
+        <div>
+            📚 Phần
+            <strong id="completedPartNumber">
+                1
+            </strong>
+        </div>
+
+
+        <div>
+            📝 Bài
+            <strong id="completedLessonNumber">
+                1
+            </strong>
+        </div>
+
+    </div>
+
+
+    <div class="complete-stats">
+
+        <div>
+            ⭐
+            <strong id="lessonXpEarned">
+                0
+            </strong>
+            <small>XP</small>
+        </div>
+
+
+        <div>
+            🎯
+            <strong id="lessonScore">
+                0
+            </strong>
+            <small>đúng</small>
+        </div>
+
+    </div>
+
+
+    <button
+        class="primary-btn"
+        onclick="goHome()">
+
+        🌳 Tiếp tục học
+
+    </button>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     REVIEW
+===================================================== -->
+
+<section id="reviewScreen" class="screen">
+
+```
+<div class="page-box">
+
+    <button
+        class="back-btn"
+        onclick="goHome()">
+
+        ←
+
+    </button>
+
+
+    <div class="page-title">
+
+        <div class="mini-mascot">
+
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+
+        </div>
+
+
+        <div>
+
+            <h1>
+                📖 Ôn tập
+            </h1>
+
+            <p>
+                Củng cố những gì bạn đã học
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="review-grid">
+
+        <button
+            class="review-card"
+            onclick="startReview('mistakes')">
+
+            <span>❌</span>
+            <strong>Lỗi sai</strong>
+            <small>Ôn lại câu đã làm sai</small>
+
+        </button>
+
+
+        <button
+            class="review-card"
+            onclick="startReview('vocabulary')">
+
+            <span>🧠</span>
+            <strong>Từ vựng</strong>
+            <small>Ôn lại từ mới</small>
+
+        </button>
+
+
+        <button
+            class="review-card"
+            onclick="startHardReview()">
+
+            <span>🔥</span>
+            <strong>Ôn tập khó</strong>
+            <small>15 câu thử thách</small>
+
+        </button>
+
+
+        <button
+            class="review-card"
+            onclick="startInfinitePractice()">
+
+            <span>♾️</span>
+            <strong>Luyện tập vô hạn</strong>
+            <small>Không giới hạn câu hỏi</small>
+
+        </button>
+
+    </div>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     RANKING
+===================================================== -->
+
+<section id="rankingScreen" class="screen">
+
+```
+<div class="page-box">
+
+    <button
+        class="back-btn"
+        onclick="goHome()">
+
+        ←
+
+    </button>
+
+
+    <div class="page-title">
+
+        <div class="mini-mascot">
+
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+
+        </div>
+
+
+        <div>
+
+            <h1>
+                🏆 Bảng xếp hạng
+            </h1>
+
+            <p>
+                Thi đua học tập mỗi ngày
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="ranking-list">
+
+        <div class="ranking-item">
+
+            <span>🥇</span>
+            <strong>Bạn</strong>
+
+            <b id="rankingXp">
+                0 XP
+            </b>
+
+        </div>
+
+
+        <div class="ranking-item">
+
+            <span>🥈</span>
+            <strong>Người học 2</strong>
+
+            <b>
+                0 XP
+            </b>
+
+        </div>
+
+
+        <div class="ranking-item">
+
+            <span>🥉</span>
+            <strong>Người học 3</strong>
+
+            <b>
+                0 XP
+            </b>
+
+        </div>
+
+    </div>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     PROFILE
+===================================================== -->
+
+<section id="profileScreen" class="screen">
+
+```
+<div class="page-box">
+
+    <button
+        class="back-btn"
+        onclick="goHome()">
+
+        ←
+
+    </button>
+
+
+    <div class="page-title">
+
+        <div class="mini-mascot">
+
+            <div class="mini-face">
+                <span></span>
+                <span></span>
+                <i></i>
+            </div>
+
+        </div>
+
+
+        <div>
+
+            <h1>
+                👤 Hồ sơ
+            </h1>
+
+            <p>
+                Tiến trình học tập của bạn
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="profile-stats">
+
+        <div class="profile-stat">
+
+            <strong id="profileXp">
+                0
+            </strong>
+
+            <span>
+                ⭐ XP
+            </span>
+
+        </div>
+
+
+        <div class="profile-stat">
+
+            <strong id="profileStreak">
+                0
+            </strong>
+
+            <span>
+                🔥 Streak
+            </span>
+
+        </div>
+
+
+        <div class="profile-stat">
+
+            <strong id="profileLevel">
+                1
+            </strong>
+
+            <span>
+                📈 Level
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div class="profile-progress">
+
+        <div class="progress-header">
+
+            <span>
+                Tiến trình
+            </span>
+
+            <strong id="profileProgress">
+                0%
+            </strong>
+
+        </div>
+
+
+        <div class="progress-bar">
+
+            <div
+                id="profileProgressBar"
+                class="progress-fill">
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     LOGIN
+===================================================== -->
+
+<section id="loginScreen" class="screen">
+
+```
+<div class="auth-box">
+
+    <h1>
+        🔐 Đăng nhập
+    </h1>
+
+
+    <input
+        id="loginUsername"
+        type="text"
+        placeholder="Tên đăng nhập">
+
+
+    <input
+        id="loginPassword"
+        type="password"
+        placeholder="Mật khẩu">
+
+
+    <button
+        class="primary-btn"
+        onclick="login()">
+
+        Đăng nhập
+
+    </button>
+
+
+    <button
+        class="secondary-btn"
+        onclick="showScreen('registerScreen')">
+
+        Tạo tài khoản
+
+    </button>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     REGISTER
+===================================================== -->
+
+<section id="registerScreen" class="screen">
+
+```
+<div class="auth-box">
+
+    <h1>
+        📝 Tạo tài khoản
+    </h1>
+
+
+    <input
+        id="registerUsername"
+        type="text"
+        placeholder="Tên đăng nhập">
+
+
+    <input
+        id="registerPassword"
+        type="password"
+        placeholder="Mật khẩu">
+
+
+    <button
+        class="primary-btn"
+        onclick="register()">
+
+        Đăng ký
+
+    </button>
+
+
+    <button
+        class="secondary-btn"
+        onclick="showScreen('loginScreen')">
+
+        Quay lại đăng nhập
+
+    </button>
+
+</div>
+```
+
+</section>
+
+<!-- =====================================================
+     SCRIPT
+===================================================== -->
+
+<script src="script.js"></script>
+
+</body>
+</html>
