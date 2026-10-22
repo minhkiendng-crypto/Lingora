@@ -41,6 +41,13 @@
         🚀 Bắt đầu
     </button>
 
+    <button
+        class="primary-btn"
+        style="background: #1cb0f6; margin-top: 10px;"
+        onclick="launchEverworld()">
+        🎮 Play EVERWORLD 3D Parkour
+    </button>
+
     <p class="small-text">
         Học • Luyện tập • Tiến bộ • Giao tiếp
     </p>
@@ -1260,10 +1267,30 @@
 </section>
 
 <!-- =====================================================
+     EVERWORLD 3D GAME SCREEN
+===================================================== -->
+
+<section id="everworldGameScreen" class="screen">
+    <div id="everworldGameContainer"></div>
+</section>
+
+<!-- =====================================================
      SCRIPT
 ===================================================== -->
 
+<script src="three.min.js"></script>
+<script src="everworld.js"></script>
 <script src="script.js"></script>
+<script>
+    function launchEverworld() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const screen = document.getElementById('everworldGameScreen');
+        if (screen) screen.classList.add('active');
+        if (window.Everworld) {
+            window.Everworld.init('everworldGameContainer');
+        }
+    }
+</script>
 
 </body>
 </html>
