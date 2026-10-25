@@ -1,0 +1,90 @@
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ------------------------< com.lingora:lingora >-------------------------
+[INFO] Building Lingora 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] >>> spring-boot:3.5.5:run (default-cli) > test-compile @ lingora >>>
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ lingora ---
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] Copying 5 resources from src/main/resources to target/classes
+[INFO]
+[INFO] --- compiler:3.14.0:compile (default-compile) @ lingora ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 5 source files with javac [debug parameters release 17] to target/classes
+[INFO]
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ lingora ---
+[INFO] skip non existing resourceDirectory /app/src/test/resources
+[INFO]
+[INFO] --- compiler:3.14.0:testCompile (default-testCompile) @ lingora ---
+[INFO] No sources to compile
+[INFO]
+[INFO] <<< spring-boot:3.5.5:run (default-cli) < test-compile @ lingora <<<
+[INFO]
+[INFO]
+[INFO] --- spring-boot:3.5.5:run (default-cli) @ lingora ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.5)
+
+2026-10-25T14:09:53.496Z  INFO 67629 --- [           main] com.lingora.LingoraApplication           : Starting LingoraApplication using Java 21.0.10 with PID 67629 (/app/target/classes started by jules in /app)
+2026-10-25T14:09:53.499Z  INFO 67629 --- [           main] com.lingora.LingoraApplication           : No active profile set, falling back to 1 default profile: "default"
+2026-10-25T14:09:54.234Z  INFO 67629 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-25T14:09:54.256Z  INFO 67629 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 13 ms. Found 0 JPA repository interfaces.
+2026-10-25T14:09:54.769Z  INFO 67629 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-10-25T14:09:54.786Z  INFO 67629 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-25T14:09:54.787Z  INFO 67629 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.44]
+2026-10-25T14:09:54.841Z  INFO 67629 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-25T14:09:54.843Z  INFO 67629 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1278 ms
+2026-10-25T14:09:54.991Z  INFO 67629 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-25T14:09:55.188Z  INFO 67629 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:461cbd94-eac1-4a82-882f-b4825b216c09 user=SA
+2026-10-25T14:09:55.190Z  INFO 67629 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-25T14:09:55.236Z  INFO 67629 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-25T14:09:55.297Z  INFO 67629 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.26.Final
+2026-10-25T14:09:55.331Z  INFO 67629 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-25T14:09:55.679Z  INFO 67629 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-25T14:09:55.768Z  INFO 67629 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 2.3.232
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-25T14:09:56.115Z  INFO 67629 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-25T14:09:56.120Z  INFO 67629 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-25T14:09:56.177Z  WARN 67629 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-25T14:09:56.208Z  INFO 67629 --- [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-10-25T14:09:56.461Z  WARN 67629 --- [           main] ion$DefaultTemplateResolverConfiguration : Cannot find template location: classpath:/templates/ (please add some templates, check your Thymeleaf configuration, or set spring.thymeleaf.check-template-location=false)
+2026-10-25T14:09:56.629Z  INFO 67629 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-10-25T14:09:56.639Z  INFO 67629 --- [           main] com.lingora.LingoraApplication           : Started LingoraApplication in 3.65 seconds (process running for 3.978)
+2026-10-25T14:10:46.381Z  INFO 67629 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-25T14:10:46.382Z  INFO 67629 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-25T14:10:46.383Z  INFO 67629 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-25T14:11:59.474Z  INFO 67629 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-10-25T14:11:59.481Z  INFO 67629 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-10-25T14:11:59.486Z  INFO 67629 --- [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-10-25T14:11:59.488Z  INFO 67629 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-10-25T14:11:59.491Z  INFO 67629 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  02:09 min
+[INFO] Finished at: 2026-10-25T14:11:59Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.5:run (default-cli) on project lingora: Process terminated with exit code: 143 -> [Help 1]
+[ERROR]
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR]
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
