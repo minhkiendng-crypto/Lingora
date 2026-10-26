@@ -1,3142 +1,493 @@
-/* =========================================================
-   LINGORA - SCRIPT.JS
-   BẢN HOÀN CHỈNH
-   ========================================================= */
+/**
+ * EVERWORLD 3D RPG - SCRIPT.JS
+ * Core Three.js Engine & Player Controller
+ */
 
-"use strict";
-
-/* =========================================================
-   CONFIG
-   ========================================================= */
-
-const LINGORA_CONFIG = {
-    placementQuestions: 30,
-    totalDoors: 11,
-    normalDoors: 10,
-    partsPerDoor: 180,
-
-    questionsMin: 8,
-    questionsMax: 15,
-
-    maxHearts: 5,
-    xpPerCorrect: 2,
-    hardReviewQuestions: 15
+// Global State
+const gameState = {
+    isStarted: false,
+    isPaused: false,
+    hp: 100,
+    maxHp: 100,
+    chakra: 100,
+    maxChakra: 100
 };
 
-
-/* =========================================================
-   DEFAULT STATE
-   ========================================================= */
-
-const DEFAULT_STATE = {
-    goal: null,
-    learningSource: null,
-
-    testScore: 0,
-    testLevel: "",
-
-    hearts: 5,
-    streak: 0,
-    xp: 0,
-    level: 1,
-
-    completedLessons: [],
-    completedParts: [],
-    completedDoors: [],
-
-    mistakes: [],
-    vocabulary: [],
-    grammar: [],
-
-    lastStudyDate: null,
-
-    currentDoor: 1,
-    currentPart: 1,
-    currentLesson: 1,
-
-    placementCompleted: false
+// Player Input State
+const keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    shift: false,
+    space: false
 };
 
-
-/* =========================================================
-   GOALS
-   ========================================================= */
-
-const GOALS = {
-    communication: {
-        name: "Giao tiếp",
-        icon: "💬"
-    },
-
-    travel: {
-        name: "Du lịch",
-        icon: "🌍"
-    },
-
-    school: {
-        name: "Trường học",
-        icon: "🏫"
-    },
-
-    work: {
-        name: "Công việc",
-        icon: "💼"
-    },
-
-    entertainment: {
-        name: "Giải trí",
-        icon: "🎬"
-    },
-
-    study: {
-        name: "Học tập",
-        icon: "📚"
-    }
+// Player Physics & Movement Specs
+const playerState = {
+    position: new THREE.Vector3(0, 1.5, 0),
+    velocity: new THREE.Vector3(0, 0, 0),
+    rotationY: 0,
+    pitch: 0,
+    isGrounded: true,
+    walkSpeed: 7,
+    runSpeed: 14,
+    jumpForce: 12,
+    gravity: 28,
+    radius: 0.6,
+    height: 1.8
 };
 
+// Three.js Core Variables
+let scene, camera, renderer;
+let playerMesh, playerModelGroup, cameraPivot;
+let obstacles = [];
+let clock = new THREE.Clock();
 
-/* =========================================================
-   DOORS
-   ========================================================= */
+// UI Elements
+let startScreen, pauseScreen, instructionsModal, hudScreen;
+let hpFill, hpText, chakraFill, chakraText;
 
-const DOORS = [
-    {
-        id: 1,
-        title: "Cơ bản",
-        icon: "🌱",
-        description: "Những câu tiếng Anh đầu tiên"
-    },
+// Initialize on DOM Load
+window.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    initThreeJS();
+    setupEventListeners();
+    animate();
+});
 
-    {
-        id: 2,
-        title: "Giao tiếp",
-        icon: "💬",
-        description: "Giao tiếp hằng ngày"
-    },
+// Setup UI References and Button Listeners
+function initUI() {
+    startScreen = document.getElementById('start-screen');
+    pauseScreen = document.getElementById('pause-screen');
+    instructionsModal = document.getElementById('instructions-modal');
+    hudScreen = document.getElementById('hud-screen');
 
-    {
-        id: 3,
-        title: "Cuộc sống",
-        icon: "🏠",
-        description: "Gia đình và cuộc sống"
-    },
+    hpFill = document.getElementById('hp-fill');
+    hpText = document.getElementById('hp-text');
+    chakraFill = document.getElementById('chakra-fill');
+    chakraText = document.getElementById('chakra-text');
 
-    {
-        id: 4,
-        title: "Du lịch",
-        icon: "🌍",
-        description: "Tiếng Anh khi đi du lịch"
-    },
-
-    {
-        id: 5,
-        title: "Trường học",
-        icon: "🏫",
-        description: "Học tập và trường lớp"
-    },
-
-    {
-        id: 6,
-        title: "Công việc",
-        icon: "💼",
-        description: "Tiếng Anh nơi làm việc"
-    },
-
-    {
-        id: 7,
-        title: "Xã hội",
-        icon: "👥",
-        description: "Giao tiếp xã hội"
-    },
-
-    {
-        id: 8,
-        title: "Tự nhiên",
-        icon: "🌳",
-        description: "Thế giới xung quanh"
-    },
-
-    {
-        id: 9,
-        title: "Nâng cao",
-        icon: "🔥",
-        description: "Câu tiếng Anh khó hơn"
-    },
-
-    {
-        id: 10,
-        title: "Thành thạo",
-        icon: "🏆",
-        description: "Luyện tập tổng hợp"
-    },
-
-    {
-        id: 11,
-        title: "Vô hạn",
-        icon: "♾️",
-        description: "AI luyện tập không giới hạn"
-    }
-];
-
-
-/* =========================================================
-   LESSON TOPICS
-   ========================================================= */
-
-const LESSON_TOPICS = [
-    "Chào hỏi",
-    "Tạm biệt",
-    "Giới thiệu bản thân",
-    "Hỏi tên",
-    "Quê quán",
-    "Tuổi",
-    "Gia đình",
-    "Sức khỏe",
-    "Bạn bè",
-    "Sở thích",
-    "Thời gian",
-    "Ngày tháng",
-    "Màu sắc",
-    "Số đếm",
-    "Đồ ăn",
-    "Đồ uống",
-    "Nhà cửa",
-    "Trường học",
-    "Công việc",
-    "Mua sắm",
-    "Thời tiết",
-    "Giao thông",
-    "Du lịch",
-    "Khách sạn",
-    "Nhà hàng",
-    "Phương hướng",
-    "Cảm xúc",
-    "Thì hiện tại",
-    "Thì quá khứ",
-    "Thì tương lai"
-];
-
-
-/* =========================================================
-   STATE
-   ========================================================= */
-
-let state = loadState();
-
-let placementQuestions = [];
-let placementIndex = 0;
-let placementScore = 0;
-let placementAnswered = false;
-
-let currentLessonData = null;
-let currentQuestionIndex = 0;
-let currentLessonScore = 0;
-let currentAnswered = false;
-
-let hardReviewData = [];
-let hardReviewIndex = 0;
-let hardReviewScore = 0;
-let hardReviewAnswered = false;
-
-
-/* =========================================================
-   DOM HELPERS
-   ========================================================= */
-
-function $(id) {
-    return document.getElementById(id);
-}
-
-
-function setText(id, value) {
-    const element = $(id);
-
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-
-function showElement(id) {
-    const element = $(id);
-
-    if (element) {
-        element.classList.remove("hidden");
-    }
-}
-
-
-function hideElement(id) {
-    const element = $(id);
-
-    if (element) {
-        element.classList.add("hidden");
-    }
-}
-
-
-/* =========================================================
-   STORAGE
-   ========================================================= */
-
-function loadState() {
-    try {
-        const saved = localStorage.getItem("lingora_state");
-
-        if (!saved) {
-            return { ...DEFAULT_STATE };
-        }
-
-        const parsed = JSON.parse(saved);
-
-        return {
-            ...DEFAULT_STATE,
-            ...parsed
-        };
-
-    } catch (error) {
-        console.error("Không thể đọc state:", error);
-
-        return {
-            ...DEFAULT_STATE
-        };
-    }
-}
-
-
-function saveState() {
-    try {
-        localStorage.setItem(
-            "lingora_state",
-            JSON.stringify(state)
-        );
-    } catch (error) {
-        console.error("Không thể lưu state:", error);
-    }
-}
-
-
-/* =========================================================
-   RESET
-   ========================================================= */
-
-function resetState() {
-    state = {
-        ...DEFAULT_STATE
-    };
-
-    saveState();
-    updateUI();
-}
-
-
-/* =========================================================
-   SCREEN
-   ========================================================= */
-
-function showScreen(screenId) {
-
-    document.querySelectorAll(".screen").forEach(function(screen) {
-        screen.classList.remove("active");
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('instructions-btn').addEventListener('click', () => {
+        instructionsModal.classList.remove('hidden');
     });
-
-    const target = $(screenId);
-
-    if (target) {
-        target.classList.add("active");
-    }
-
-    window.scrollTo(0, 0);
-}
-
-
-/* =========================================================
-   START APP
-   ========================================================= */
-
-function startApp() {
-
-    console.log("Lingora: bắt đầu");
-
-    if (state.placementCompleted) {
-        showScreen("homeScreen");
-
-        renderDoors();
-        updateUI();
-
-        return;
-    }
-
-    showScreen("goalScreen");
-
-    updateUI();
-}
-
-
-/* =========================================================
-   GOAL
-   ========================================================= */
-
-function getGoalName(goal) {
-
-    if (!GOALS[goal]) {
-        return "";
-    }
-
-    return GOALS[goal].name;
-}
-
-
-function selectGoal(goal) {
-
-    if (!GOALS[goal]) {
-        console.error("Mục tiêu không tồn tại:", goal);
-        return;
-    }
-
-    state.goal = goal;
-
-    saveState();
-
-    document.querySelectorAll(".goal-card").forEach(function(card) {
-        card.classList.remove("selected");
+    document.getElementById('close-inst-btn').addEventListener('click', () => {
+        instructionsModal.classList.add('hidden');
     });
-
-    const selectedCard = document.querySelector(
-        '.goal-card[data-goal="' + goal + '"]'
-    );
-
-    if (selectedCard) {
-        selectedCard.classList.add("selected");
-    }
-
-    setText(
-        "goalText",
-        GOALS[goal].icon + " " + GOALS[goal].name
-    );
-
-    const continueButton = $("goalContinue");
-
-    if (continueButton) {
-        continueButton.disabled = false;
-        continueButton.removeAttribute("disabled");
-    }
-
-    console.log("Đã chọn:", goal);
+    document.getElementById('resume-btn').addEventListener('click', resumeGame);
+    document.getElementById('respawn-btn').addEventListener('click', respawnPlayer);
+    document.getElementById('main-menu-btn').addEventListener('click', exitToMainMenu);
 }
 
+// Three.js World & Scene Setup
+function initThreeJS() {
+    const container = document.getElementById('canvas-container');
 
-function goToInfo() {
+    // Scene setup with fantasy fog
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a1128);
+    scene.fog = new THREE.FogExp2(0x0a1128, 0.015);
 
-    if (!state.goal) {
-        alert("Hãy chọn mục tiêu học trước nhé!");
-        return;
-    }
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
 
-    showScreen("infoScreen");
+    // Camera setup with Orbit/Pivot system
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    cameraPivot = new THREE.Object3D();
+    scene.add(cameraPivot);
+    cameraPivot.add(camera);
+    camera.position.set(0, 2.5, 6); // Third-person offset behind player
+    camera.lookAt(0, 1.2, 0);
+
+    // Lighting
+    setupLighting();
+
+    // Environment: Ground Terrain, Training Field, Fantasy Landmarks
+    buildEnvironment();
+
+    // Player Avatar creation
+    createPlayerAvatar();
 }
 
+// Lighting Setup
+function setupLighting() {
+    // Ambient Light
+    const ambientLight = new THREE.AmbientLight(0xdff0ff, 0.6);
+    scene.add(ambientLight);
 
-/* =========================================================
-   CHOOSE LEVEL
-   ========================================================= */
+    // Main Directional Sun / Moon Light
+    const dirLight = new THREE.DirectionalLight(0x70b0ff, 1.2);
+    dirLight.position.set(40, 80, 40);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 150;
+    const shadowSize = 50;
+    dirLight.shadow.camera.left = -shadowSize;
+    dirLight.shadow.camera.right = shadowSize;
+    dirLight.shadow.camera.top = shadowSize;
+    dirLight.shadow.camera.bottom = -shadowSize;
+    scene.add(dirLight);
 
-function chooseInfo(source) {
-
-    state.learningSource = source;
-
-    saveState();
-
-    startPlacementTest();
+    // Point Light (Chakra Crystal Glow in Center)
+    const crystalLight = new THREE.PointLight(0x00ffff, 2, 30);
+    crystalLight.position.set(0, 4, -15);
+    scene.add(crystalLight);
 }
 
-
-/* =========================================================
-   PLACEMENT QUESTION BANK
-   ========================================================= */
-
-const PLACEMENT_BANK = [
-
-    {
-        id: 1,
-        question: "Hello! What is your name?",
-        answers: [
-            "My name is Nam.",
-            "I am fine.",
-            "I am 12 years old.",
-            "Good night."
-        ],
-        correct: 0,
-        explanation: "Câu hỏi hỏi tên nên câu trả lời phù hợp là 'My name is Nam.'",
-        difficulty: "very-easy",
-        topic: "Giới thiệu"
-    },
-
-    {
-        id: 2,
-        question: "How are you?",
-        answers: [
-            "I'm fine, thank you.",
-            "I'm twelve.",
-            "I'm from Vietnam.",
-            "My name is Lan."
-        ],
-        correct: 0,
-        explanation: "'How are you?' hỏi tình trạng/sức khỏe.",
-        difficulty: "very-easy",
-        topic: "Giao tiếp"
-    },
-
-    {
-        id: 3,
-        question: "Where are you from?",
-        answers: [
-            "I'm from Vietnam.",
-            "I'm thirteen.",
-            "I'm fine.",
-            "I'm a student."
-        ],
-        correct: 0,
-        explanation: "'Where are you from?' hỏi bạn đến từ đâu.",
-        difficulty: "very-easy",
-        topic: "Quê quán"
-    },
-
-    {
-        id: 4,
-        question: "How old are you?",
-        answers: [
-            "I'm thirteen.",
-            "I'm from Vietnam.",
-            "I'm fine.",
-            "My name is Minh."
-        ],
-        correct: 0,
-        explanation: "'How old are you?' hỏi tuổi.",
-        difficulty: "very-easy",
-        topic: "Tuổi"
-    },
-
-    {
-        id: 5,
-        question: "Choose the correct sentence.",
-        answers: [
-            "She is my friend.",
-            "She are my friend.",
-            "She am my friend.",
-            "She be my friend."
-        ],
-        correct: 0,
-        explanation: "Với 'she', động từ to be ở hiện tại là 'is'.",
-        difficulty: "easy",
-        topic: "To be"
-    },
-
-    {
-        id: 6,
-        question: "I ___ a student.",
-        answers: [
-            "am",
-            "is",
-            "are",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Với chủ ngữ 'I', dùng 'am'.",
-        difficulty: "easy",
-        topic: "To be"
-    },
-
-    {
-        id: 7,
-        question: "They ___ my friends.",
-        answers: [
-            "are",
-            "is",
-            "am",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Với 'they', dùng 'are'.",
-        difficulty: "easy",
-        topic: "To be"
-    },
-
-    {
-        id: 8,
-        question: "What time do you get up?",
-        answers: [
-            "At seven o'clock.",
-            "On Monday.",
-            "In the kitchen.",
-            "Because I'm tired."
-        ],
-        correct: 0,
-        explanation: "Câu hỏi hỏi thời gian nên dùng 'At seven o'clock.'",
-        difficulty: "easy",
-        topic: "Thời gian"
-    },
-
-    {
-        id: 9,
-        question: "I usually ___ breakfast at 7 a.m.",
-        answers: [
-            "have",
-            "has",
-            "having",
-            "had"
-        ],
-        correct: 0,
-        explanation: "Với 'I' ở hiện tại đơn, dùng động từ nguyên mẫu 'have'.",
-        difficulty: "easy",
-        topic: "Hiện tại đơn"
-    },
-
-    {
-        id: 10,
-        question: "She ___ to school every day.",
-        answers: [
-            "goes",
-            "go",
-            "going",
-            "gone"
-        ],
-        correct: 0,
-        explanation: "Với 'she' ở hiện tại đơn, động từ 'go' thêm -es thành 'goes'.",
-        difficulty: "medium",
-        topic: "Hiện tại đơn"
-    },
-
-    {
-        id: 11,
-        question: "There ___ a book on the table.",
-        answers: [
-            "is",
-            "are",
-            "am",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Có một quyển sách nên dùng 'There is'.",
-        difficulty: "medium",
-        topic: "There is"
-    },
-
-    {
-        id: 12,
-        question: "There ___ three apples in the basket.",
-        answers: [
-            "are",
-            "is",
-            "am",
-            "be"
-        ],
-        correct: 0,
-        explanation: "'Three apples' là số nhiều nên dùng 'There are'.",
-        difficulty: "medium",
-        topic: "There are"
-    },
-
-    {
-        id: 13,
-        question: "I ___ TV yesterday.",
-        answers: [
-            "watched",
-            "watch",
-            "watching",
-            "watches"
-        ],
-        correct: 0,
-        explanation: "'Yesterday' cho biết hành động xảy ra trong quá khứ.",
-        difficulty: "medium",
-        topic: "Quá khứ đơn"
-    },
-
-    {
-        id: 14,
-        question: "She is ___ than her brother.",
-        answers: [
-            "taller",
-            "tall",
-            "tallest",
-            "more tall"
-        ],
-        correct: 0,
-        explanation: "So sánh hơn với tính từ ngắn 'tall' dùng 'taller'.",
-        difficulty: "medium",
-        topic: "So sánh"
-    },
-
-    {
-        id: 15,
-        question: "I have lived here ___ 2020.",
-        answers: [
-            "since",
-            "for",
-            "at",
-            "on"
-        ],
-        correct: 0,
-        explanation: "'Since' đi với một mốc thời gian như 2020.",
-        difficulty: "hard",
-        topic: "Hiện tại hoàn thành"
-    },
-
-    {
-        id: 16,
-        question: "If it rains, we ___ at home.",
-        answers: [
-            "will stay",
-            "stayed",
-            "staying",
-            "have stayed"
-        ],
-        correct: 0,
-        explanation: "Câu điều kiện loại 1: If + hiện tại đơn, mệnh đề chính dùng will + V.",
-        difficulty: "hard",
-        topic: "Điều kiện"
-    },
-
-    {
-        id: 17,
-        question: "He has ___ his homework.",
-        answers: [
-            "finished",
-            "finish",
-            "finishing",
-            "finishes"
-        ],
-        correct: 0,
-        explanation: "Sau 'has' trong hiện tại hoàn thành dùng quá khứ phân từ.",
-        difficulty: "hard",
-        topic: "Hiện tại hoàn thành"
-    },
-
-    {
-        id: 18,
-        question: "I was tired because I ___ all day.",
-        answers: [
-            "had worked",
-            "work",
-            "am working",
-            "will work"
-        ],
-        correct: 0,
-        explanation: "Hành động xảy ra trước một thời điểm trong quá khứ có thể dùng quá khứ hoàn thành.",
-        difficulty: "hard",
-        topic: "Quá khứ hoàn thành"
-    },
-
-    {
-        id: 19,
-        question: "Would you like some coffee?",
-        answers: [
-            "Yes, please.",
-            "Yes, I am.",
-            "Yes, I do.",
-            "Yes, I was."
-        ],
-        correct: 0,
-        explanation: "Đây là lời mời, câu trả lời tự nhiên là 'Yes, please.'",
-        difficulty: "medium",
-        topic: "Giao tiếp"
-    },
-
-    {
-        id: 20,
-        question: "Could you help me?",
-        answers: [
-            "Sure.",
-            "I'm twelve.",
-            "It's Monday.",
-            "I'm from Vietnam."
-        ],
-        correct: 0,
-        explanation: "'Could you help me?' là lời nhờ giúp đỡ.",
-        difficulty: "medium",
-        topic: "Giao tiếp"
-    },
-
-    {
-        id: 21,
-        question: "How much is this shirt?",
-        answers: [
-            "It's $20.",
-            "It's blue.",
-            "It's mine.",
-            "It's large."
-        ],
-        correct: 0,
-        explanation: "'How much' hỏi giá tiền.",
-        difficulty: "medium",
-        topic: "Mua sắm"
-    },
-
-    {
-        id: 22,
-        question: "Where is the nearest hotel?",
-        answers: [
-            "It's next to the bank.",
-            "It's very expensive.",
-            "It's delicious.",
-            "It's Tuesday."
-        ],
-        correct: 0,
-        explanation: "Câu hỏi hỏi vị trí nên câu trả lời phải chỉ vị trí.",
-        difficulty: "medium",
-        topic: "Du lịch"
-    },
-
-    {
-        id: 23,
-        question: "I am going to ___ my grandmother tomorrow.",
-        answers: [
-            "visit",
-            "visited",
-            "visiting",
-            "visits"
-        ],
-        correct: 0,
-        explanation: "Sau 'going to' dùng động từ nguyên mẫu.",
-        difficulty: "medium",
-        topic: "Tương lai"
-    },
-
-    {
-        id: 24,
-        question: "She can ___ English very well.",
-        answers: [
-            "speak",
-            "speaks",
-            "speaking",
-            "spoke"
-        ],
-        correct: 0,
-        explanation: "Sau động từ khuyết thiếu 'can' dùng động từ nguyên mẫu.",
-        difficulty: "medium",
-        topic: "Modal verbs"
-    },
-
-    {
-        id: 25,
-        question: "This is the book ___ I bought yesterday.",
-        answers: [
-            "that",
-            "where",
-            "when",
-            "who"
-        ],
-        correct: 0,
-        explanation: "'That' có thể thay cho vật trong mệnh đề quan hệ.",
-        difficulty: "hard",
-        topic: "Mệnh đề quan hệ"
-    },
-
-    {
-        id: 26,
-        question: "If I ___ more time, I would learn another language.",
-        answers: [
-            "had",
-            "have",
-            "will have",
-            "having"
-        ],
-        correct: 0,
-        explanation: "Điều kiện loại 2 dùng If + quá khứ đơn.",
-        difficulty: "hard",
-        topic: "Điều kiện"
-    },
-
-    {
-        id: 27,
-        question: "The movie was ___ interesting that I watched it twice.",
-        answers: [
-            "so",
-            "such",
-            "too",
-            "very"
-        ],
-        correct: 0,
-        explanation: "Cấu trúc 'so + adjective + that'.",
-        difficulty: "hard",
-        topic: "Cấu trúc câu"
-    },
-
-    {
-        id: 28,
-        question: "By next year, I ___ English for five years.",
-        answers: [
-            "will have studied",
-            "study",
-            "studied",
-            "am studying"
-        ],
-        correct: 0,
-        explanation: "Hành động kéo dài đến một thời điểm trong tương lai dùng tương lai hoàn thành.",
-        difficulty: "hard",
-        topic: "Tương lai hoàn thành"
-    },
-
-    {
-        id: 29,
-        question: "She asked me where I ___.",
-        answers: [
-            "lived",
-            "live",
-            "am living",
-            "will live"
-        ],
-        correct: 0,
-        explanation: "Trong câu tường thuật với động từ quá khứ, thường lùi thì.",
-        difficulty: "hard",
-        topic: "Câu tường thuật"
-    },
-
-    {
-        id: 30,
-        question: "Neither Tom nor his friends ___ ready.",
-        answers: [
-            "are",
-            "is",
-            "am",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Với 'Neither...nor', động từ thường hòa hợp với chủ ngữ gần nó: 'his friends' → are.",
-        difficulty: "hard",
-        topic: "Ngữ pháp"
-    }
-
-];
-
-
-/* =========================================================
-   SHUFFLE
-   ========================================================= */
-
-function shuffle(array) {
-
-    const result = [...array];
-
-    for (let i = result.length - 1; i > 0; i--) {
-
-        const j = Math.floor(Math.random() * (i + 1));
-
-        const temp = result[i];
-
-        result[i] = result[j];
-        result[j] = temp;
-    }
-
-    return result;
-}
-
-
-/* =========================================================
-   SHUFFLE ANSWERS
-   ========================================================= */
-
-function shuffleQuestionAnswers(question) {
-
-    const answerObjects = question.answers.map(function(answer, index) {
-        return {
-            text: answer,
-            originalIndex: index
-        };
+// Build Fantasy Training Environment
+function buildEnvironment() {
+    // Ground Grass Field
+    const groundGeo = new THREE.PlaneGeometry(200, 200, 32, 32);
+    const groundMat = new THREE.MeshStandardMaterial({
+        color: 0x1a3a2a,
+        roughness: 0.8,
+        metalness: 0.1
     });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-    const shuffled = shuffle(answerObjects);
-
-    return {
-        ...question,
-
-        answers: shuffled.map(function(item) {
-            return item.text;
-        }),
-
-        correct: shuffled.findIndex(function(item) {
-            return item.originalIndex === question.correct;
-        })
-    };
-}
-
-
-/* =========================================================
-   PLACEMENT TEST
-   ========================================================= */
-
-function startPlacementTest() {
-
-    placementQuestions = shuffle(
-        PLACEMENT_BANK
-    ).slice(
-        0,
-        LINGORA_CONFIG.placementQuestions
-    );
-
-    placementIndex = 0;
-    placementScore = 0;
-    placementAnswered = false;
-
-    state.testScore = 0;
-    state.testLevel = "";
-
-    saveState();
-
-    showScreen("testScreen");
-
-    renderPlacementQuestion();
-}
-
-
-function createPlacementTest() {
-    startPlacementTest();
-}
-
-
-function renderPlacementQuestion() {
-
-    if (!placementQuestions.length) {
-        return;
-    }
-
-    const originalQuestion =
-        placementQuestions[placementIndex];
-
-    const question =
-        shuffleQuestionAnswers(originalQuestion);
-
-    placementQuestions[placementIndex] = question;
-
-    placementAnswered = false;
-
-    setText(
-        "testQuestionNumber",
-        placementIndex + 1
-    );
-
-    setText(
-        "testQuestion",
-        question.question
-    );
-
-    setText(
-        "testTopic",
-        question.topic
-    );
-
-    const progress =
-        ((placementIndex) /
-            placementQuestions.length) * 100;
-
-    const progressBar = $("testProgress");
-
-    if (progressBar) {
-        progressBar.style.width =
-            progress + "%";
-    }
-
-    const answersContainer =
-        $("testAnswers");
-
-    if (!answersContainer) {
-        return;
-    }
-
-    answersContainer.innerHTML = "";
-
-    question.answers.forEach(function(answer, index) {
-
-        const button =
-            document.createElement("button");
-
-        button.className = "answer-option";
-
-        button.textContent =
-            answer;
-
-        button.addEventListener(
-            "click",
-            function() {
-                answerPlacement(index);
-            }
-        );
-
-        answersContainer.appendChild(button);
+    // Stone Training Platform in center
+    const platformGeo = new THREE.CylinderGeometry(15, 16, 0.8, 32);
+    const platformMat = new THREE.MeshStandardMaterial({
+        color: 0x3d4a5d,
+        roughness: 0.5
     });
+    const platform = new THREE.Mesh(platformGeo, platformMat);
+    platform.position.set(0, 0.4, -15);
+    platform.receiveShadow = true;
+    platform.castShadow = true;
+    scene.add(platform);
 
-    hideElement("testExplanation");
-
-    const nextButton =
-        $("testNextButton");
-
-    if (nextButton) {
-        nextButton.disabled = true;
-        nextButton.textContent =
-            placementIndex ===
-            placementQuestions.length - 1
-                ? "Xem kết quả"
-                : "Tiếp tục →";
-    }
-}
-
-
-function answerPlacement(index) {
-
-    if (placementAnswered) {
-        return;
-    }
-
-    placementAnswered = true;
-
-    const question =
-        placementQuestions[placementIndex];
-
-    const buttons =
-        document.querySelectorAll(
-            "#testAnswers .answer-option"
-        );
-
-    buttons.forEach(function(button, buttonIndex) {
-
-        button.disabled = true;
-
-        if (buttonIndex === question.correct) {
-            button.classList.add("correct");
-        }
-
-        if (
-            buttonIndex === index &&
-            index !== question.correct
-        ) {
-            button.classList.add("wrong");
-        }
+    // Floating Chakra Crystal Pillar
+    const crystalGeo = new THREE.OctahedronGeometry(2, 0);
+    const crystalMat = new THREE.MeshStandardMaterial({
+        color: 0x00f2ff,
+        emissive: 0x0088cc,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.85
     });
-
-    if (index === question.correct) {
-
-        placementScore++;
-
-    } else {
-
-        showExplanation(
-            "testExplanation",
-            question.explanation
-        );
-    }
-
-    const nextButton =
-        $("testNextButton");
-
-    if (nextButton) {
-        nextButton.disabled = false;
-    }
-}
-
-
-function nextPlacementQuestion() {
-
-    if (!placementAnswered) {
-        return;
-    }
-
-    placementIndex++;
-
-    if (
-        placementIndex >=
-        placementQuestions.length
-    ) {
-
-        finishPlacementTest();
-
-        return;
-    }
-
-    renderPlacementQuestion();
-}
-
-
-function finishPlacementTest() {
-
-    const total =
-        placementQuestions.length || 30;
-
-    const percentage =
-        (placementScore / total) * 100;
-
-    let level = "";
-
-    if (percentage < 30) {
-        level = "🌱 Mới bắt đầu";
-    } else if (percentage < 50) {
-        level = "🌿 Cơ bản";
-    } else if (percentage < 70) {
-        level = "🌳 Khá";
-    } else if (percentage < 85) {
-        level = "🔥 Tốt";
-    } else {
-        level = "🏆 Nâng cao";
-    }
-
-    state.testScore = placementScore;
-    state.testLevel = level;
-    state.placementCompleted = true;
-
-    saveState();
-
-    setText(
-        "testScore",
-        placementScore
-    );
-
-    setText(
-        "testLevel",
-        level
-    );
-
-    setText(
-        "testMessage",
-        "Lingora đã phân tích kết quả và sẵn sàng đưa bạn vào cây học tập."
-    );
-
-    showScreen("resultScreen");
-}
-
-
-function finishTest() {
-
-    showScreen("homeScreen");
-
-    renderDoors();
-    updateUI();
-}
-
-
-/* =========================================================
-   LESSON QUESTION BANK
-   ========================================================= */
-
-const QUESTION_BANK = [
-
-    {
-        id: 101,
-        question: "How do you say 'Xin chào' in English?",
-        answers: [
-            "Hello",
-            "Goodbye",
-            "Thanks",
-            "Sorry"
-        ],
-        correct: 0,
-        explanation: "'Hello' nghĩa là 'Xin chào'.",
-        topic: "Chào hỏi"
-    },
-
-    {
-        id: 102,
-        question: "How do you say 'Tạm biệt'?",
-        answers: [
-            "Goodbye",
-            "Hello",
-            "Please",
-            "Welcome"
-        ],
-        correct: 0,
-        explanation: "'Goodbye' nghĩa là 'Tạm biệt'.",
-        topic: "Tạm biệt"
-    },
-
-    {
-        id: 103,
-        question: "What is your name?",
-        answers: [
-            "My name is Minh.",
-            "I'm fine.",
-            "I'm twelve.",
-            "I'm from Vietnam."
-        ],
-        correct: 0,
-        explanation: "Câu hỏi 'What is your name?' hỏi tên.",
-        topic: "Giới thiệu"
-    },
-
-    {
-        id: 104,
-        question: "Nice to meet you.",
-        answers: [
-            "Nice to meet you, too.",
-            "I'm twelve.",
-            "Good night.",
-            "I'm hungry."
-        ],
-        correct: 0,
-        explanation: "Câu đáp tự nhiên là 'Nice to meet you, too.'",
-        topic: "Giao tiếp"
-    },
-
-    {
-        id: 105,
-        question: "Where are you from?",
-        answers: [
-            "I'm from Vietnam.",
-            "I'm fine.",
-            "I'm twelve.",
-            "I'm a student."
-        ],
-        correct: 0,
-        explanation: "Dùng 'I'm from...' để nói mình đến từ đâu.",
-        topic: "Quê quán"
-    },
-
-    {
-        id: 106,
-        question: "How old are you?",
-        answers: [
-            "I'm twelve years old.",
-            "I'm from Vietnam.",
-            "I'm fine.",
-            "My name is Nam."
-        ],
-        correct: 0,
-        explanation: "Dùng 'I'm ... years old' để nói tuổi.",
-        topic: "Tuổi"
-    },
-
-    {
-        id: 107,
-        question: "How are you?",
-        answers: [
-            "I'm fine, thank you.",
-            "I'm twelve.",
-            "I'm from Vietnam.",
-            "My name is Lan."
-        ],
-        correct: 0,
-        explanation: "'How are you?' hỏi tình trạng/sức khỏe.",
-        topic: "Sức khỏe"
-    },
-
-    {
-        id: 108,
-        question: "I ___ a student.",
-        answers: [
-            "am",
-            "is",
-            "are",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Với 'I', dùng 'am'.",
-        topic: "Ngữ pháp"
-    },
-
-    {
-        id: 109,
-        question: "She ___ my friend.",
-        answers: [
-            "is",
-            "are",
-            "am",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Với 'she', dùng 'is'.",
-        topic: "Ngữ pháp"
-    },
-
-    {
-        id: 110,
-        question: "They ___ happy.",
-        answers: [
-            "are",
-            "is",
-            "am",
-            "be"
-        ],
-        correct: 0,
-        explanation: "Với 'they', dùng 'are'.",
-        topic: "Ngữ pháp"
-    },
-
-    {
-        id: 111,
-        question: "I usually ___ breakfast at 7.",
-        answers: [
-            "have",
-            "has",
-            "having",
-            "had"
-        ],
-        correct: 0,
-        explanation: "Với 'I' ở hiện tại đơn dùng 'have'.",
-        topic: "Hiện tại đơn"
-    },
-
-    {
-        id: 112,
-        question: "She ___ to school every day.",
-        answers: [
-            "goes",
-            "go",
-            "going",
-            "gone"
-        ],
-        correct: 0,
-        explanation: "Với 'she', 'go' thành 'goes'.",
-        topic: "Hiện tại đơn"
-    },
-
-    {
-        id: 113,
-        question: "I ___ TV yesterday.",
-        answers: [
-            "watched",
-            "watch",
-            "watching",
-            "watches"
-        ],
-        correct: 0,
-        explanation: "'Yesterday' cho biết hành động trong quá khứ.",
-        topic: "Quá khứ"
-    },
-
-    {
-        id: 114,
-        question: "I am going to ___ tomorrow.",
-        answers: [
-            "travel",
-            "traveled",
-            "travels",
-            "traveling"
-        ],
-        correct: 0,
-        explanation: "Sau 'going to' dùng động từ nguyên mẫu.",
-        topic: "Tương lai"
-    },
-
-    {
-        id: 115,
-        question: "Can you help me?",
-        answers: [
-            "Sure.",
-            "I'm twelve.",
-            "It's Monday.",
-            "I'm hungry."
-        ],
-        correct: 0,
-        explanation: "'Sure' là cách đáp tự nhiên khi đồng ý giúp.",
-        topic: "Giao tiếp"
-    },
-
-    {
-        id: 116,
-        question: "How much is this?",
-        answers: [
-            "It's ten dollars.",
-            "It's blue.",
-            "It's mine.",
-            "It's big."
-        ],
-        correct: 0,
-        explanation: "'How much' hỏi giá.",
-        topic: "Mua sắm"
-    },
-
-    {
-        id: 117,
-        question: "Where is the bathroom?",
-        answers: [
-            "It's over there.",
-            "I'm hungry.",
-            "It's delicious.",
-            "I'm twelve."
-        ],
-        correct: 0,
-        explanation: "Câu hỏi hỏi vị trí nên câu trả lời cần chỉ vị trí.",
-        topic: "Du lịch"
-    },
-
-    {
-        id: 118,
-        question: "Would you like some water?",
-        answers: [
-            "Yes, please.",
-            "Yes, I am.",
-            "Yes, I do.",
-            "Yes, I was."
-        ],
-        correct: 0,
-        explanation: "Lời mời thường được đáp bằng 'Yes, please.'",
-        topic: "Giao tiếp"
-    }
-];
-
-
-/* =========================================================
-   GENERATE QUESTIONS
-   ========================================================= */
-
-function generateQuestions(
-    door = 1,
-    part = 1,
-    lesson = 1
-) {
-
-    let amount =
-        Math.floor(
-            Math.random() *
-            (
-                LINGORA_CONFIG.questionsMax -
-                LINGORA_CONFIG.questionsMin +
-                1
-            )
-        ) +
-        LINGORA_CONFIG.questionsMin;
-
-    amount =
-        Math.min(
-            amount,
-            QUESTION_BANK.length
-        );
-
-    const selected =
-        shuffle(QUESTION_BANK)
-            .slice(0, amount)
-            .map(function(question) {
-                return shuffleQuestionAnswers(question);
-            });
-
-    return selected;
-}
-
-
-/* =========================================================
-   START LESSON
-   ========================================================= */
-
-function startLesson(
-    door = 1,
-    part = 1,
-    lesson = 1
-) {
-
-    currentLessonData = {
-        door: door,
-        part: part,
-        lesson: lesson,
-        questions: generateQuestions(
-            door,
-            part,
-            lesson
-        )
-    };
-
-    currentQuestionIndex = 0;
-    currentLessonScore = 0;
-    currentAnswered = false;
-
-    state.currentDoor = door;
-    state.currentPart = part;
-    state.currentLesson = lesson;
-
-    saveState();
-
-    showScreen("lessonScreen");
-
-    renderLessonQuestion();
-}
-
-
-/* =========================================================
-   RENDER LESSON
-   ========================================================= */
-
-function renderLessonQuestion() {
-
-    if (!currentLessonData) {
-        return;
-    }
-
-    const total =
-        currentLessonData.questions.length;
-
-    if (
-        currentQuestionIndex >= total
-    ) {
-        finishLesson();
-
-        return;
-    }
-
-    const question =
-        currentLessonData.questions[
-            currentQuestionIndex
-        ];
-
-    currentAnswered = false;
-
-    setText(
-        "currentDoorNumber",
-        currentLessonData.door
-    );
-
-    setText(
-        "currentPartNumber",
-        currentLessonData.part
-    );
-
-    setText(
-        "currentLessonNumber",
-        currentLessonData.lesson
-    );
-
-    setText(
-        "lessonQuestionNumber",
-        currentQuestionIndex + 1
-    );
-
-    setText(
-        "lessonQuestionTotal",
-        total
-    );
-
-    setText(
-        "lessonQuestion",
-        question.question
-    );
-
-    setText(
-        "lessonType",
-        question.topic || "Luyện tập"
-    );
-
-    const progress =
-        ((currentQuestionIndex) /
-            total) * 100;
-
-    const progressBar =
-        $("lessonProgress");
-
-    if (progressBar) {
-        progressBar.style.width =
-            progress + "%";
-    }
-
-    const answers =
-        $("lessonAnswers");
-
-    if (!answers) {
-        return;
-    }
-
-    answers.innerHTML = "";
-
-    question.answers.forEach(
-        function(answer, index) {
-
-            const button =
-                document.createElement("button");
-
-            button.className =
-                "answer-option";
-
-            button.textContent =
-                answer;
-
-            button.addEventListener(
-                "click",
-                function() {
-                    answerLesson(index);
-                }
-            );
-
-            answers.appendChild(button);
-        }
-    );
-
-    hideElement("lessonExplanation");
-
-    const feedback =
-        $("lessonFeedback");
-
-    if (feedback) {
-        feedback.className =
-            "feedback hidden";
-
-        feedback.textContent = "";
-    }
-
-    const nextButton =
-        $("lessonNextButton");
-
-    if (nextButton) {
-        nextButton.disabled = true;
-        nextButton.textContent =
-            "Kiểm tra";
-    }
-
-    setText(
-        "lessonHearts",
-        state.hearts
-    );
-}
-
-
-/* =========================================================
-   ANSWER LESSON
-   ========================================================= */
-
-function answerLesson(index) {
-
-    if (currentAnswered) {
-        return;
-    }
-
-    if (!currentLessonData) {
-        return;
-    }
-
-    currentAnswered = true;
-
-    const question =
-        currentLessonData.questions[
-            currentQuestionIndex
-        ];
-
-    const buttons =
-        document.querySelectorAll(
-            "#lessonAnswers .answer-option"
-        );
-
-    buttons.forEach(
-        function(button, buttonIndex) {
-
-            button.disabled = true;
-
-            if (
-                buttonIndex ===
-                question.correct
-            ) {
-                button.classList.add(
-                    "correct"
-                );
-            }
-
-            if (
-                buttonIndex === index &&
-                index !== question.correct
-            ) {
-                button.classList.add(
-                    "wrong"
-                );
-            }
-        }
-    );
-
-    if (
-        index === question.correct
-    ) {
-
-        currentLessonScore++;
-
-        state.xp +=
-            LINGORA_CONFIG.xpPerCorrect;
-
-        showFeedback(
-            "lessonFeedback",
-            "✅ Chính xác!"
-        );
-
-    } else {
-
-        state.hearts =
-            Math.max(
-                0,
-                state.hearts - 1
-            );
-
-        saveMistake(question);
-
-        showFeedback(
-            "lessonFeedback",
-            "❌ Chưa đúng. Xem giải thích nhé!"
-        );
-
-        showExplanation(
-            "lessonExplanation",
-            question.explanation
-        );
-    }
-
-    saveState();
-
-    updateUI();
-
-    setText(
-        "lessonHearts",
-        state.hearts
-    );
-
-    const nextButton =
-        $("lessonNextButton");
-
-    if (nextButton) {
-        nextButton.disabled = false;
-
-        nextButton.textContent =
-            currentQuestionIndex ===
-            currentLessonData.questions.length - 1
-                ? "Hoàn thành"
-                : "Tiếp tục →";
-    }
-}
-
-
-/* =========================================================
-   NEXT LESSON QUESTION
-   ========================================================= */
-
-function nextLessonQuestion() {
-
-    if (!currentAnswered) {
-        return;
-    }
-
-    currentQuestionIndex++;
-
-    if (
-        currentLessonData &&
-        currentQuestionIndex >=
-        currentLessonData.questions.length
-    ) {
-
-        finishLesson();
-
-        return;
-    }
-
-    renderLessonQuestion();
-}
-
-
-/* =========================================================
-   FINISH LESSON
-   ========================================================= */
-
-function finishLesson() {
-
-    if (!currentLessonData) {
-        return;
-    }
-
-    const lessonKey =
-        currentLessonData.door +
-        "-" +
-        currentLessonData.part +
-        "-" +
-        currentLessonData.lesson;
-
-    if (
-        !state.completedLessons.includes(
-            lessonKey
-        )
-    ) {
-
-        state.completedLessons.push(
-            lessonKey
-        );
-    }
-
-    const partKey =
-        currentLessonData.door +
-        "-" +
-        currentLessonData.part;
-
-    if (
-        !state.completedParts.includes(
-            partKey
-        )
-    ) {
-
-        state.completedParts.push(
-            partKey
-        );
-    }
-
-    const doorKey =
-        String(
-            currentLessonData.door
-        );
-
-    if (
-        !state.completedDoors.includes(
-            doorKey
-        ) &&
-        currentLessonData.lesson >= 180
-    ) {
-
-        state.completedDoors.push(
-            doorKey
-        );
-    }
-
-    setText(
-        "completedDoorNumber",
-        currentLessonData.door
-    );
-
-    setText(
-        "completedPartNumber",
-        currentLessonData.part
-    );
-
-    setText(
-        "completedLessonNumber",
-        currentLessonData.lesson
-    );
-
-    setText(
-        "lessonXpEarned",
-        currentLessonScore *
-        LINGORA_CONFIG.xpPerCorrect
-    );
-
-    setText(
-        "lessonScore",
-        currentLessonScore +
-        "/" +
-        currentLessonData.questions.length
-    );
-
-    updateStreak();
-
-    saveState();
-
-    showScreen(
-        "lessonCompleteScreen"
-    );
-
-    updateUI();
-}
-
-
-/* =========================================================
-   EXIT LESSON
-   ========================================================= */
-
-function exitLesson() {
-
-    currentLessonData = null;
-    currentQuestionIndex = 0;
-    currentLessonScore = 0;
-    currentAnswered = false;
-
-    goHome();
-}
-
-
-/* =========================================================
-   FEEDBACK
-   ========================================================= */
-
-function showFeedback(id, message) {
-
-    const element = $(id);
-
-    if (!element) {
-        return;
-    }
-
-    element.textContent = message;
-    element.classList.remove("hidden");
-}
-
-
-function showExplanation(id, message) {
-
-    const element = $(id);
-
-    if (!element) {
-        return;
-    }
-
-    element.innerHTML =
-        "<strong>💡 Tại sao?</strong><br>" +
-        message;
-
-    element.classList.remove(
-        "hidden"
-    );
-}
-
-
-/* =========================================================
-   MISTAKES
-   ========================================================= */
-
-function saveMistake(question) {
-
-    const exists =
-        state.mistakes.some(
-            function(item) {
-                return item.id === question.id;
-            }
-        );
-
-    if (!exists) {
-
-        state.mistakes.push({
-            id: question.id,
-            question: question.question,
-            explanation: question.explanation
+    const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+    crystal.position.set(0, 4, -15);
+    crystal.name = 'chakraCrystal';
+    scene.add(crystal);
+
+    // Decorative Pillars / Training Obstacles
+    const pillarGeo = new THREE.CylinderGeometry(0.8, 1, 6, 16);
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x5a687a });
+
+    const pillarPositions = [
+        [-10, 3, -10], [10, 3, -10],
+        [-10, 3, -20], [10, 3, -20],
+        [-18, 3, 0], [18, 3, 0],
+        [-12, 3, 15], [12, 3, 15]
+    ];
+
+    pillarPositions.forEach(pos => {
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(pos[0], pos[1], pos[2]);
+        pillar.castShadow = true;
+        pillar.receiveShadow = true;
+        scene.add(pillar);
+
+        // Store bounding cylinder info for collision
+        obstacles.push({
+            x: pos[0],
+            z: pos[2],
+            radius: 1.2
         });
+    });
+
+    // Stylized Trees around boundary
+    for (let i = 0; i < 30; i++) {
+        const angle = (i / 30) * Math.PI * 2;
+        const radius = 45 + Math.random() * 15;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+
+        createTree(x, z);
+        obstacles.push({ x: x, z: z, radius: 1.5 });
     }
 }
 
+// Helper to create tree mesh
+function createTree(x, z) {
+    const trunkGeo = new THREE.CylinderGeometry(0.5, 0.8, 4, 8);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817 });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.set(x, 2, z);
+    trunk.castShadow = true;
 
-/* =========================================================
-   HARD REVIEW
-   ========================================================= */
+    const foliageGeo = new THREE.ConeGeometry(3, 7, 8);
+    const foliageMat = new THREE.MeshStandardMaterial({ color: 0x0f5231, roughness: 0.7 });
+    const foliage = new THREE.Mesh(foliageGeo, foliageMat);
+    foliage.position.set(x, 6, z);
+    foliage.castShadow = true;
 
-function startHardReview() {
-
-    hardReviewData =
-        shuffle(
-            QUESTION_BANK
-        )
-        .slice(
-            0,
-            LINGORA_CONFIG.hardReviewQuestions
-        )
-        .map(function(question) {
-            return shuffleQuestionAnswers(question);
-        });
-
-    hardReviewIndex = 0;
-    hardReviewScore = 0;
-    hardReviewAnswered = false;
-
-    showScreen("lessonScreen");
-
-    renderHardReviewQuestion();
+    scene.add(trunk);
+    scene.add(foliage);
 }
 
+// Anime-style Player Avatar Construction
+function createPlayerAvatar() {
+    playerModelGroup = new THREE.Group();
 
-function renderHardReviewQuestion() {
+    // Body / Torso
+    const torsoGeo = new THREE.CylinderGeometry(0.4, 0.3, 1.1, 12);
+    const torsoMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a }); // Navy Blue Outfit
+    const torso = new THREE.Mesh(torsoGeo, torsoMat);
+    torso.position.y = 0.85;
+    torso.castShadow = true;
+    playerModelGroup.add(torso);
 
-    if (
-        hardReviewIndex >=
-        hardReviewData.length
-    ) {
+    // Head
+    const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac }); // Skin tone
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 1.6;
+    head.castShadow = true;
+    playerModelGroup.add(head);
 
-        finishHardReview();
+    // Anime Hair
+    const hairGeo = new THREE.ConeGeometry(0.42, 0.5, 8);
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x00f2ff }); // Glowing Cyan Hair
+    const hair = new THREE.Mesh(hairGeo, hairMat);
+    hair.position.set(0, 1.85, -0.05);
+    hair.rotation.x = -0.2;
+    playerModelGroup.add(hair);
 
-        return;
-    }
+    // Scarf / Cape Detail
+    const scarfGeo = new THREE.BoxGeometry(0.8, 0.2, 0.4);
+    const scarfMat = new THREE.MeshStandardMaterial({ color: 0xff3366 });
+    const scarf = new THREE.Mesh(scarfGeo, scarfMat);
+    scarf.position.set(0, 1.35, -0.2);
+    playerModelGroup.add(scarf);
 
-    const question =
-        hardReviewData[
-            hardReviewIndex
-        ];
+    playerMesh = playerModelGroup;
+    scene.add(playerMesh);
 
-    hardReviewAnswered = false;
+    // Sync pivot to player mesh
+    cameraPivot.position.copy(playerMesh.position);
+}
 
-    setText(
-        "currentDoorNumber",
-        "🔥"
-    );
-
-    setText(
-        "currentPartNumber",
-        "Ôn"
-    );
-
-    setText(
-        "currentLessonNumber",
-        "Tập"
-    );
-
-    setText(
-        "lessonQuestionNumber",
-        hardReviewIndex + 1
-    );
-
-    setText(
-        "lessonQuestionTotal",
-        hardReviewData.length
-    );
-
-    setText(
-        "lessonQuestion",
-        question.question
-    );
-
-    setText(
-        "lessonType",
-        "Ôn tập khó"
-    );
-
-    const progressBar =
-        $("lessonProgress");
-
-    if (progressBar) {
-
-        progressBar.style.width =
-            (
-                hardReviewIndex /
-                hardReviewData.length *
-                100
-            ) + "%";
-    }
-
-    const answers =
-        $("lessonAnswers");
-
-    if (!answers) {
-        return;
-    }
-
-    answers.innerHTML = "";
-
-    question.answers.forEach(
-        function(answer, index) {
-
-            const button =
-                document.createElement("button");
-
-            button.className =
-                "answer-option";
-
-            button.textContent =
-                answer;
-
-            button.addEventListener(
-                "click",
-                function() {
-                    answerHardReview(index);
-                }
-            );
-
-            answers.appendChild(button);
+// Controls & Keyboard Listeners
+function setupEventListeners() {
+    window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') keys.w = true;
+        if (key === 'a' || key === 'arrowleft') keys.a = true;
+        if (key === 's' || key === 'arrowdown') keys.s = true;
+        if (key === 'd' || key === 'arrowright') keys.d = true;
+        if (e.key === 'Shift') keys.shift = true;
+        if (e.code === 'Space') {
+            keys.space = true;
+            e.preventDefault();
         }
-    );
-
-    hideElement("lessonExplanation");
-
-    const nextButton =
-        $("lessonNextButton");
-
-    if (nextButton) {
-        nextButton.disabled = true;
-        nextButton.textContent =
-            "Kiểm tra";
-    }
-
-    setText(
-        "lessonHearts",
-        state.hearts
-    );
-}
-
-
-function answerHardReview(index) {
-
-    if (hardReviewAnswered) {
-        return;
-    }
-
-    hardReviewAnswered = true;
-
-    const question =
-        hardReviewData[
-            hardReviewIndex
-        ];
-
-    const buttons =
-        document.querySelectorAll(
-            "#lessonAnswers .answer-option"
-        );
-
-    buttons.forEach(
-        function(button, buttonIndex) {
-
-            button.disabled = true;
-
-            if (
-                buttonIndex ===
-                question.correct
-            ) {
-                button.classList.add(
-                    "correct"
-                );
-            }
-
-            if (
-                buttonIndex === index &&
-                index !== question.correct
-            ) {
-                button.classList.add(
-                    "wrong"
-                );
+        if (e.key === 'Escape') {
+            if (gameState.isStarted) {
+                togglePause();
             }
         }
-    );
+    });
 
-    if (
-        index === question.correct
-    ) {
+    window.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup') keys.w = false;
+        if (key === 'a' || key === 'arrowleft') keys.a = false;
+        if (key === 's' || key === 'arrowdown') keys.s = false;
+        if (key === 'd' || key === 'arrowright') keys.d = false;
+        if (e.key === 'Shift') keys.shift = false;
+        if (e.code === 'Space') keys.space = false;
+    });
 
-        hardReviewScore++;
+    // Mouse Look (Pointer Lock)
+    renderer.domElement.addEventListener('click', () => {
+        if (gameState.isStarted && !gameState.isPaused) {
+            renderer.domElement.requestPointerLock();
+        }
+    });
 
-        showFeedback(
-            "lessonFeedback",
-            "✅ Chính xác!"
-        );
+    document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement === renderer.domElement && !gameState.isPaused) {
+            const mouseSensitivity = 0.0025;
+            playerState.rotationY -= e.movementX * mouseSensitivity;
 
+            // Pitch controls vertical camera angle
+            playerState.pitch -= e.movementY * mouseSensitivity;
+            playerState.pitch = Math.max(-Math.PI / 4, Math.min(Math.PI / 3, playerState.pitch));
+        }
+    });
+
+    // Window Resize Handler
+    window.addEventListener('resize', onWindowResize);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// Game Controls: Start, Pause, Resume, Respawn
+function startGame() {
+    gameState.isStarted = true;
+    gameState.isPaused = false;
+    startScreen.classList.add('hidden');
+    hudScreen.classList.remove('hidden');
+    renderer.domElement.requestPointerLock();
+}
+
+function togglePause() {
+    gameState.isPaused = !gameState.isPaused;
+    if (gameState.isPaused) {
+        pauseScreen.classList.remove('hidden');
+        document.exitPointerLock();
     } else {
-
-        showFeedback(
-            "lessonFeedback",
-            "❌ Chưa đúng!"
-        );
-
-        showExplanation(
-            "lessonExplanation",
-            question.explanation
-        );
-    }
-
-    const nextButton =
-        $("lessonNextButton");
-
-    if (nextButton) {
-        nextButton.disabled = false;
-
-        nextButton.textContent =
-            hardReviewIndex ===
-            hardReviewData.length - 1
-                ? "Xem kết quả"
-                : "Tiếp tục →";
+        pauseScreen.classList.add('hidden');
+        renderer.domElement.requestPointerLock();
     }
 }
 
+function resumeGame() {
+    gameState.isPaused = false;
+    pauseScreen.classList.add('hidden');
+    renderer.domElement.requestPointerLock();
+}
 
-function nextHardReviewQuestion() {
+function respawnPlayer() {
+    playerState.position.set(0, 1.5, 0);
+    playerState.velocity.set(0, 0, 0);
+    playerState.rotationY = 0;
+    playerState.pitch = 0;
+    gameState.hp = gameState.maxHp;
+    gameState.chakra = gameState.maxChakra;
+    updateHUD();
+    resumeGame();
+}
 
-    if (!hardReviewAnswered) {
-        return;
+function exitToMainMenu() {
+    gameState.isStarted = false;
+    gameState.isPaused = false;
+    pauseScreen.classList.add('hidden');
+    hudScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+    document.exitPointerLock();
+}
+
+function updateHUD() {
+    if (hpFill) hpFill.style.width = `${(gameState.hp / gameState.maxHp) * 100}%`;
+    if (hpText) hpText.textContent = `${Math.round(gameState.hp)} / ${gameState.maxHp}`;
+    if (chakraFill) chakraFill.style.width = `${(gameState.chakra / gameState.maxChakra) * 100}%`;
+    if (chakraText) chakraText.textContent = `${Math.round(gameState.chakra)} / ${gameState.maxChakra}`;
+}
+
+// Main Animation & Physics Loop
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = Math.min(clock.getDelta(), 0.1);
+
+    if (gameState.isStarted && !gameState.isPaused) {
+        updatePlayerPhysics(delta);
+        animateSceneElements();
     }
 
-    hardReviewIndex++;
-
-    if (
-        hardReviewIndex >=
-        hardReviewData.length
-    ) {
-
-        finishHardReview();
-
-        return;
-    }
-
-    renderHardReviewQuestion();
+    renderer.render(scene, camera);
 }
 
-
-function finishHardReview() {
-
-    const wasZero =
-        state.hearts === 0;
-
-    if (
-        wasZero &&
-        hardReviewScore >= 8
-    ) {
-
-        state.hearts =
-            Math.min(
-                LINGORA_CONFIG.maxHearts,
-                state.hearts + 1
-            );
-    }
-
-    state.xp +=
-        hardReviewScore *
-        LINGORA_CONFIG.xpPerCorrect;
-
-    saveState();
-
-    alert(
-        "🔥 Ôn tập hoàn thành!\n" +
-        "Đúng: " +
-        hardReviewScore +
-        "/" +
-        hardReviewData.length +
-        "\n❤️ Tim hiện tại: " +
-        state.hearts
-    );
-
-    goHome();
-}
-
-
-/* =========================================================
-   REVIEW
-   ========================================================= */
-
-function showReview() {
-    showScreen("reviewScreen");
-}
-
-
-function startReview(type) {
-
-    if (
-        type === "mistakes" &&
-        state.mistakes.length > 0
-    ) {
-
-        const mistakeQuestions =
-            state.mistakes.map(
-                function(item) {
-
-                    return {
-                        id: item.id,
-                        question: item.question,
-                        answers: [
-                            "Đáp án A",
-                            "Đáp án B",
-                            "Đáp án C",
-                            "Đáp án D"
-                        ],
-                        correct: 0,
-                        explanation:
-                            item.explanation,
-                        topic: "Lỗi sai"
-                    };
-                }
-            );
-
-        currentLessonData = {
-            door: 0,
-            part: "Ôn",
-            lesson: "Lỗi",
-            questions:
-                mistakeQuestions.map(
-                    function(question) {
-                        return shuffleQuestionAnswers(
-                            question
-                        );
-                    }
-                )
-        };
-
-        currentQuestionIndex = 0;
-        currentLessonScore = 0;
-        currentAnswered = false;
-
-        showScreen("lessonScreen");
-
-        renderLessonQuestion();
-
-        return;
-    }
-
-    if (type === "vocabulary") {
-
-        alert(
-            "📚 Bạn chưa có nhiều từ vựng cần ôn. Hãy học thêm bài mới nhé!"
-        );
-
-        return;
-    }
-
-    showReview();
-}
-
-
-/* =========================================================
-   INFINITE PRACTICE
-   ========================================================= */
-
-function startInfinitePractice() {
-
-    currentLessonData = {
-        door: 11,
-        part: "∞",
-        lesson: "∞",
-        questions: generateQuestions(
-            11,
-            0,
-            0
-        )
-    };
-
-    currentQuestionIndex = 0;
-    currentLessonScore = 0;
-    currentAnswered = false;
-
-    showScreen("lessonScreen");
-
-    renderLessonQuestion();
-}
-
-
-/* =========================================================
-   DOORS
-   ========================================================= */
-
-function renderDoors() {
-
-    const container =
-        $("doorsContainer");
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
-
-    DOORS.forEach(
-        function(door) {
-
-            const completed =
-                state.completedDoors.includes(
-                    String(door.id)
-                );
-
-            const card =
-                document.createElement("button");
-
-            card.className =
-                "door-card";
-
-            card.innerHTML = `
-                <div class="door-icon">
-                    ${door.icon}
-                </div>
-
-                <div class="door-info">
-                    <strong>
-                        Cửa ${door.id}: ${door.title}
-                    </strong>
-
-                    <small>
-                        ${door.description}
-                    </small>
-
-                    <span>
-                        ${
-                            door.id === 11
-                                ? "♾️ Vô hạn"
-                                : "180 phần • 1.800 câu"
-                        }
-                    </span>
-                </div>
-
-                <div class="door-status">
-                    ${
-                        completed
-                            ? "✅"
-                            : "→"
-                    }
-                </div>
-            `;
-
-            card.addEventListener(
-                "click",
-                function() {
-                    openDoor(door.id);
-                }
-            );
-
-            container.appendChild(card);
-        }
-    );
-}
-
-
-/* =========================================================
-   OPEN DOOR
-   ========================================================= */
-
-function openDoor(doorId) {
-
-    if (
-        doorId === 11
-    ) {
-
-        startInfinitePractice();
-
-        return;
-    }
-
-    openPart(
-        doorId,
-        1
-    );
-}
-
-
-/* =========================================================
-   OPEN PART
-   ========================================================= */
-
-function openPart(
-    doorId,
-    partId
-) {
-
-    state.currentDoor =
-        doorId;
-
-    state.currentPart =
-        partId;
-
-    saveState();
-
-    const door =
-        DOORS.find(
-            function(item) {
-                return item.id === doorId;
-            }
-        );
-
-    if (door) {
-
-        setText(
-            "partDoorTitle",
-            "🚪 Cửa " + door.id
-        );
-
-        setText(
-            "partTitle",
-            "📚 Phần " + partId
-        );
-
-        setText(
-            "partDescription",
-            door.description
-        );
-    }
-
-    renderParts(
-        doorId,
-        partId
-    );
-
-    showScreen("partScreen");
-}
-
-
-/* =========================================================
-   RENDER PARTS
-   ========================================================= */
-
-function renderParts(
-    doorId,
-    currentPart
-) {
-
-    const container =
-        $("partsContainer");
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
-
-    const start =
-        Math.max(
-            1,
-            currentPart
-        );
-
-    const end =
-        Math.min(
-            180,
-            start + 17
-        );
-
-    for (
-        let part = start;
-        part <= end;
-        part++
-    ) {
-
-        const card =
-            document.createElement("button");
-
-        card.className =
-            "part-card";
-
-        const completed =
-            state.completedParts.includes(
-                doorId + "-" + part
-            );
-
-        card.innerHTML = `
-            <div class="part-number">
-                ${
-                    completed
-                        ? "✅"
-                        : "📚"
-                }
-            </div>
-
-            <div>
-                <strong>
-                    Phần ${part}
-                </strong>
-
-                <small>
-                    ${LESSON_TOPICS[
-                        (part - 1) %
-                        LESSON_TOPICS.length
-                    ]}
-                </small>
-
-                <span>
-                    10 bài học
-                </span>
-            </div>
-        `;
-
-        card.addEventListener(
-            "click",
-            function() {
-                startLesson(
-                    doorId,
-                    part,
-                    1
-                );
-            }
-        );
-
-        container.appendChild(card);
-    }
-}
-
-
-/* =========================================================
-   HOME
-   ========================================================= */
-
-function goHome() {
-
-    showScreen("homeScreen");
-
-    renderDoors();
-    updateUI();
-}
-
-
-/* =========================================================
-   RANKING
-   ========================================================= */
-
-function goRanking() {
-
-    setText(
-        "rankingXp",
-        state.xp + " XP"
-    );
-
-    showScreen("rankingScreen");
-}
-
-
-/* =========================================================
-   PROFILE
-   ========================================================= */
-
-function goProfile() {
-
-    setText(
-        "profileXp",
-        state.xp
-    );
-
-    setText(
-        "profileStreak",
-        state.streak
-    );
-
-    setText(
-        "profileLevel",
-        state.level
-    );
-
-    const percentage =
-        getProgressPercent();
-
-    setText(
-        "profileProgress",
-        percentage + "%"
-    );
-
-    const progressBar =
-        $("profileProgressBar");
-
-    if (progressBar) {
-        progressBar.style.width =
-            percentage + "%";
-    }
-
-    showScreen("profileScreen");
-}
-
-
-/* =========================================================
-   PROGRESS
-   ========================================================= */
-
-function getTotalNormalLessons() {
-
-    return (
-        LINGORA_CONFIG.normalDoors *
-        LINGORA_CONFIG.partsPerDoor
-    );
-}
-
-
-function getProgressPercent() {
-
-    const total =
-        getTotalNormalLessons();
-
-    if (total <= 0) {
-        return 0;
-    }
-
-    const completed =
-        state.completedLessons.length;
-
-    return Math.min(
-        100,
-        Math.round(
-            completed /
-            total *
-            100
-        )
-    );
-}
-
-
-/* =========================================================
-   STREAK
-   ========================================================= */
-
-function updateStreak() {
-
-    const today =
-        new Date()
-            .toISOString()
-            .slice(0, 10);
-
-    if (
-        state.lastStudyDate === today
-    ) {
-        return;
-    }
-
-    if (!state.lastStudyDate) {
-
-        state.streak = 1;
-
+// Player Movement Physics & Collision Logic
+function updatePlayerPhysics(delta) {
+    // 1. Calculate Movement Vector relative to Camera Rotation
+    const moveDir = new THREE.Vector3(0, 0, 0);
+
+    if (keys.w) moveDir.z -= 1;
+    if (keys.s) moveDir.z += 1;
+    if (keys.a) moveDir.x -= 1;
+    if (keys.d) moveDir.x += 1;
+
+    const currentSpeed = keys.shift ? playerState.runSpeed : playerState.walkSpeed;
+
+    if (moveDir.lengthSq() > 0) {
+        moveDir.normalize();
+
+        // Rotate movement vector according to player camera yaw
+        moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerState.rotationY);
+
+        // Apply velocity smoothly
+        playerState.velocity.x = moveDir.x * currentSpeed;
+        playerState.velocity.z = moveDir.z * currentSpeed;
+
+        // Orient character mesh in direction of movement
+        const targetAngle = Math.atan2(moveDir.x, moveDir.z);
+        playerMesh.rotation.y = targetAngle;
     } else {
+        // Smooth deceleration
+        playerState.velocity.x *= 0.8;
+        playerState.velocity.z *= 0.8;
+    }
 
-        const previous =
-            new Date(
-                state.lastStudyDate
-            );
+    // 2. Jump & Gravity
+    if (keys.space && playerState.isGrounded) {
+        playerState.velocity.y = playerState.jumpForce;
+        playerState.isGrounded = false;
+    }
 
-        const current =
-            new Date(today);
+    // Apply gravity
+    playerState.velocity.y -= playerState.gravity * delta;
 
-        const difference =
-            Math.floor(
-                (
-                    current -
-                    previous
-                ) /
-                (
-                    1000 *
-                    60 *
-                    60 *
-                    24
-                )
-            );
+    // 3. Position Update & Ground Collision
+    playerState.position.x += playerState.velocity.x * delta;
+    playerState.position.z += playerState.velocity.z * delta;
+    playerState.position.y += playerState.velocity.y * delta;
 
-        if (difference === 1) {
+    // Ground check (Height = 1.5)
+    if (playerState.position.y <= 1.5) {
+        playerState.position.y = 1.5;
+        playerState.velocity.y = 0;
+        playerState.isGrounded = true;
+    }
 
-            state.streak++;
+    // 4. Obstacle Cylindrical Collisions
+    obstacles.forEach(obs => {
+        const dx = playerState.position.x - obs.x;
+        const dz = playerState.position.z - obs.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        const minDist = obs.radius + playerState.radius;
 
-        } else {
-
-            state.streak = 1;
+        if (dist < minDist && dist > 0) {
+            // Push player outside obstacle radius
+            const pushX = (dx / dist) * (minDist - dist);
+            const pushZ = (dz / dist) * (minDist - dist);
+            playerState.position.x += pushX;
+            playerState.position.z += pushZ;
         }
-    }
+    });
 
-    state.lastStudyDate =
-        today;
+    // 5. Sync Three.js Meshes & Camera Pivot
+    playerMesh.position.copy(playerState.position);
+
+    // Camera Pivot follows player position with pitch and yaw
+    cameraPivot.position.copy(playerState.position);
+    cameraPivot.rotation.y = playerState.rotationY;
+    cameraPivot.rotation.x = playerState.pitch;
 }
 
-
-/* =========================================================
-   UI UPDATE
-   ========================================================= */
-
-function updateUI() {
-
-    setText(
-        "heartCount",
-        state.hearts
-    );
-
-    setText(
-        "streakCount",
-        state.streak
-    );
-
-    setText(
-        "xpCount",
-        state.xp
-    );
-
-    setText(
-        "lessonHearts",
-        state.hearts
-    );
-
-    setText(
-        "testHearts",
-        state.hearts
-    );
-
-    setText(
-        "profileXp",
-        state.xp
-    );
-
-    setText(
-        "profileStreak",
-        state.streak
-    );
-
-    setText(
-        "profileLevel",
-        state.level
-    );
-
-    setText(
-        "rankingXp",
-        state.xp + " XP"
-    );
-
-    setText(
-        "profileProgress",
-        getProgressPercent() + "%"
-    );
-
-    if (state.goal) {
-
-        setText(
-            "goalText",
-            GOALS[state.goal].icon +
-            " " +
-            GOALS[state.goal].name
-        );
-
-        const selected =
-            document.querySelector(
-                '.goal-card[data-goal="' +
-                state.goal +
-                '"]'
-            );
-
-        if (selected) {
-            selected.classList.add(
-                "selected"
-            );
-        }
-
-        const continueButton =
-            $("goalContinue");
-
-        if (continueButton) {
-            continueButton.disabled =
-                false;
-        }
+// Decorative Scene Animations (Floating crystal, etc.)
+function animateSceneElements() {
+    const time = clock.getElapsedTime();
+    const crystal = scene.getObjectByName('chakraCrystal');
+    if (crystal) {
+        crystal.rotation.y = time * 0.8;
+        crystal.position.y = 4 + Math.sin(time * 2) * 0.4;
     }
 }
-
-
-/* =========================================================
-   BUTTON BIND
-   ========================================================= */
-
-function bindButtons() {
-
-    const goalContinue =
-        $("goalContinue");
-
-    if (goalContinue) {
-
-        goalContinue.addEventListener(
-            "click",
-            goToInfo
-        );
-    }
-}
-
-
-/* =========================================================
-   LOGIN
-   ========================================================= */
-
-async function login() {
-
-    const username =
-        $("loginUsername")?.value.trim();
-
-    const password =
-        $("loginPassword")?.value;
-
-    if (!username || !password) {
-
-        alert(
-            "Vui lòng nhập đầy đủ thông tin!"
-        );
-
-        return;
-    }
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/login",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        username,
-                        password
-                    })
-                }
-            );
-
-        const data =
-            await response.json();
-
-        if (
-            data.status ===
-            "success"
-        ) {
-
-            alert(
-                "Đăng nhập thành công!"
-            );
-
-            showScreen(
-                "homeScreen"
-            );
-
-            renderDoors();
-            updateUI();
-
-        } else {
-
-            alert(
-                data.message ||
-                "Đăng nhập thất bại!"
-            );
-        }
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Không thể kết nối máy chủ."
-        );
-    }
-}
-
-
-/* =========================================================
-   REGISTER
-   ========================================================= */
-
-async function register() {
-
-    const username =
-        $("registerUsername")?.value.trim();
-
-    const password =
-        $("registerPassword")?.value;
-
-    if (!username || !password) {
-
-        alert(
-            "Vui lòng nhập đầy đủ thông tin!"
-        );
-
-        return;
-    }
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/register",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        username,
-                        password
-                    })
-                }
-            );
-
-        const data =
-            await response.json();
-
-        if (
-            data.status ===
-            "success"
-        ) {
-
-            alert(
-                "Đăng ký thành công!"
-            );
-
-            showScreen(
-                "loginScreen"
-            );
-
-        } else {
-
-            alert(
-                data.message ||
-                "Đăng ký thất bại!"
-            );
-        }
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Không thể kết nối máy chủ."
-        );
-    }
-}
-
-
-/* =========================================================
-   NEXT BUTTON SUPPORT
-   ========================================================= */
-
-function nextLesson() {
-
-    if (
-        hardReviewData.length > 0 &&
-        hardReviewIndex <
-        hardReviewData.length &&
-        hardReviewAnswered
-    ) {
-
-        nextHardReviewQuestion();
-
-        return;
-    }
-
-    nextLessonQuestion();
-}
-
-
-/* =========================================================
-   WINDOW EXPORT
-   ========================================================= */
-
-window.Lingora = {
-
-    startApp,
-
-    selectGoal,
-    goToInfo,
-    chooseInfo,
-
-    startPlacementTest,
-    createPlacementTest,
-
-    nextPlacementQuestion,
-    finishPlacementTest,
-    finishTest,
-
-    startLesson,
-    answerLesson,
-    nextLessonQuestion,
-    finishLesson,
-    exitLesson,
-
-    startHardReview,
-    startReview,
-    startInfinitePractice,
-
-    showReview,
-
-    goHome,
-    goRanking,
-    goProfile,
-
-    openDoor,
-    openPart,
-
-    login,
-    register,
-
-    resetState
-};
-
-
-/* =========================================================
-   INITIALIZE
-   ========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function() {
-
-        console.log(
-            "🌳 Lingora đã tải thành công!"
-        );
-
-        bindButtons();
-
-        updateUI();
-
-        /*
-         * Không tự chuyển màn hình.
-         * Màn hình welcome sẽ hiện trước.
-         */
-
-        showScreen(
-            "welcomeScreen"
-        );
-    }
-);
