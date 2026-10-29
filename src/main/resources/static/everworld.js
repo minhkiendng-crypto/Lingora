@@ -18,7 +18,7 @@ window.Everworld = (function () {
     let wallRunWalls = [];   // Vertical walls for wall running
     let grappleAnchors = []; // Grapple target anchors
 
-    // Grapple visual cable line
+    // Visual elements
     let grappleLine;
 
     // Movement States enum
@@ -29,14 +29,12 @@ window.Everworld = (function () {
         WALL_RUNNING: "WallRunning",
         VAULTING: "Vaulting",
         MANTLING: "Mantling",
-        LEDGE_GRABBING: "LedgeGrabbing",
         GRAPPLING: "Grappling",
         AIR_DASHING: "AirDashing"
     };
 
     // Configuration parameters
     const Config = {
-        // Basic speeds
         walkSpeed: 6.0,
         runSpeed: 11.0,
         sprintSpeed: 15.0,
@@ -47,15 +45,14 @@ window.Everworld = (function () {
 
         // Jump parameters
         jumpImpulse: 12.0,
-        longJumpForwardImpulse: 9.0,
+        longJumpForwardImpulse: 10.0,
         longJumpUpImpulse: 10.0,
 
         // SLIDING PARAMETERS (Exact spec requirements)
-        // Initial speed is EXACTLY 20.0 u/s immediately upon sliding
+        // Initial speed is EXACTLY 20.0 u/s immediately when sliding begins
         slideInitialSpeed: 20.0,
         slideMaxSpeed: 20.0,
         slideDeceleration: 14.0, // Configurable deceleration rate (u/s²)
-        slideMinSpeedToCancel: 0.0,
 
         // Wall run
         wallRunSpeed: 13.0,
@@ -77,7 +74,7 @@ window.Everworld = (function () {
         airDashDuration: 0.18,
 
         // Player bounds
-        playerRadius: 0.5,
+        playerRadius: 0.45,
         playerHeight: 1.8,
         crouchHeight: 0.9,
         eyeHeight: 1.6,
@@ -86,18 +83,19 @@ window.Everworld = (function () {
 
     // Player State Variables
     let currentState = State.GROUNDED;
-    let position = new THREE.Vector3(0, 1.0, 0);
+    let position = new THREE.Vector3(0, 0, 0);
     let velocity = new THREE.Vector3(0, 0, 0);
 
     // Slide specific variables
     let slideSpeed = 0;
     let slideDirection = new THREE.Vector3(0, 0, 1);
-    let ctrlWasPressed = false; // Prevents holding Ctrl from repeatedly resetting slide speed!
+    let ctrlWasPressed = false; // Key-hold protection: holding Ctrl will NOT repeatedly reset slide speed!
+    let slideJustStarted = false; // Ensures full 20.0 u/s is applied on initial frame before deceleration
 
     // Camera parameters
     let isFirstPerson = false;
-    let cameraPitch = 0; // Pitch angle (-PI/2 to PI/2)
-    let cameraYaw = Math.PI;   // Yaw angle facing forward
+    let cameraPitch = 0;
+    let cameraYaw = Math.PI;
     let cameraDistance = 4.5;
     let cameraCurrentOffset = new THREE.Vector3(0, 1.6, 0);
 
@@ -106,7 +104,7 @@ window.Everworld = (function () {
     let wallRunDirection = new THREE.Vector3();
     let wallRunTimer = 0;
 
-    // Mantle state variables
+    // Mantle / Vault state variables
     let mantleStartPos = new THREE.Vector3();
     let mantleTargetPos = new THREE.Vector3();
     let mantleTimer = 0;
@@ -120,6 +118,9 @@ window.Everworld = (function () {
     let canAirDash = true;
     let airDashTimer = 0;
     let airDashDir = new THREE.Vector3();
+
+    // Ground surface variable
+    let currentGroundY = 0;
 
     // Input state
     const keys = {
@@ -151,11 +152,9 @@ window.Everworld = (function () {
     function init(targetContainerId) {
         container = document.getElementById(targetContainerId) || document.body;
 
-        // Clear existing canvas if re-initialized
         const oldCanvas = document.getElementById("everworldCanvas");
         if (oldCanvas) oldCanvas.remove();
 
-        // Create canvas
         canvas = document.createElement("canvas");
         canvas.id = "everworldCanvas";
         canvas.style.width = "100%";
@@ -163,15 +162,12 @@ window.Everworld = (function () {
         canvas.style.display = "block";
         container.appendChild(canvas);
 
-        // Three.js Scene Setup
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0f172a);
         scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
 
-        // Camera
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
 
-        // Renderer
         renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         renderer.setSize(container.clientWidth || window.innerWidth, container.clientHeight || window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -180,14 +176,12 @@ window.Everworld = (function () {
 
         clock = new THREE.Clock();
 
-        // Build Scene
         setupLighting();
         buildParkourCourse();
         createPlayerMesh();
         setupHUD();
         setupEventListeners();
 
-        // Start Loop
         requestAnimationFrame(animate);
     }
 
@@ -229,13 +223,12 @@ window.Everworld = (function () {
         wallRunWalls = [];
         grappleAnchors = [];
 
-        // Materials
         const matGround = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
         const matPlatform = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5 });
         const matWall = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 });
-        const matVault = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 }); // Orange
-        const matMantle = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 }); // Green
-        const matRamp = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.5 });  // Indigo
+        const matVault = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 });
+        const matMantle = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.3 });
+        const matRamp = new THREE.MeshStandardMaterial({ color: 0x6366f1, roughness: 0.5 });
         const matAnchor = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x0891b2, roughness: 0.2 });
 
         function addBox(x, y, z, w, h, d, material, type = "collider") {
@@ -261,7 +254,7 @@ window.Everworld = (function () {
             return item;
         }
 
-        // 1. Main Ground
+        // 1. Ground Floor (Top surface at y = 0)
         addBox(0, -0.5, 0, 140, 1, 140, matGround);
 
         // Grid
@@ -269,8 +262,9 @@ window.Everworld = (function () {
         grid.position.y = 0.01;
         scene.add(grid);
 
-        // 2. Sliding Ramp & Platform
+        // 2. Raised Slide Platform (Top surface at y = 5.5)
         addBox(-20, 5, 20, 14, 1, 14, matPlatform);
+        // Ramp
         const rampGeo = new THREE.BoxGeometry(10, 1, 22);
         const rampMesh = new THREE.Mesh(rampGeo, matRamp);
         rampMesh.rotation.x = 0.25;
@@ -279,7 +273,7 @@ window.Everworld = (function () {
         rampMesh.receiveShadow = true;
         scene.add(rampMesh);
 
-        // 3. Wall Running Channel (Left wall & Right wall)
+        // 3. Wall Running Channel
         addBox(-8, 6, -15, 0.8, 12, 30, matWall, "wall");
         addBox(0, 6, -15, 0.8, 12, 30, matWall, "wall");
 
@@ -287,17 +281,17 @@ window.Everworld = (function () {
         addBox(12, 0.6, 5, 8, 1.2, 0.8, matVault, "vault");
         addBox(12, 0.6, 15, 8, 1.2, 0.8, matVault, "vault");
 
-        // 5. Mantle / Ledge Blocks (Heights 2.5m, 4.0m, 6.0m)
+        // 5. Mantle / Ledge Blocks
         addBox(24, 1.25, -5, 6, 2.5, 4, matMantle, "mantle");
         addBox(24, 2.0, -15, 6, 4.0, 4, matMantle, "mantle");
         addBox(24, 3.0, -25, 6, 6.0, 4, matMantle, "mantle");
 
-        // 6. Air Dash & Gap Platforms
+        // 6. Air Dash & Gap Platforms (Top surfaces at y = 3.5)
         addBox(0, 3, 25, 6, 1, 6, matPlatform);
         addBox(0, 3, 42, 6, 1, 6, matPlatform);
         addBox(0, 3, 62, 6, 1, 6, matPlatform);
 
-        // 7. Grapple Targets
+        // 7. Grapple Target Anchors
         const anchorPositions = [
             new THREE.Vector3(-4, 12, -15),
             new THREE.Vector3(0, 11, 33.5),
@@ -322,7 +316,7 @@ window.Everworld = (function () {
             grappleAnchors.push({ position: pos, mesh, ring, id: idx });
         });
 
-        // Grapple line
+        // Grapple cable line
         const lineMat = new THREE.LineBasicMaterial({ color: 0x00f0ff, linewidth: 3 });
         const lineGeo = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(),
@@ -491,6 +485,50 @@ window.Everworld = (function () {
     }
 
     /* =========================================================
+       DYNAMIC COLLISION & GROUNDING SYSTEM
+       ========================================================= */
+
+    function checkGroundAndCollisions() {
+        const r = Config.playerRadius;
+        currentGroundY = 0; // Main floor level
+
+        // 1. Ground / Platform Surface Check
+        colliders.forEach(col => {
+            if (position.x >= col.min.x - r && position.x <= col.max.x + r &&
+                position.z >= col.min.z - r && position.z <= col.max.z + r) {
+                const topY = col.max.y;
+                if (position.y >= topY - 0.25 && position.y <= topY + 0.6) {
+                    if (topY > currentGroundY) {
+                        currentGroundY = topY;
+                    }
+                }
+            }
+        });
+
+        // 2. Horizontal AABB Collision Resolution against Solid Obstacles & Walls
+        colliders.forEach(col => {
+            if (position.y + 0.1 > col.min.y && position.y < col.max.y) {
+                if (position.z > col.min.z - r && position.z < col.max.z + r &&
+                    position.x > col.min.x - r && position.x < col.max.x + r) {
+
+                    const overlapLeft = (col.max.x + r) - position.x;
+                    const overlapRight = position.x - (col.min.x - r);
+                    const overlapBack = (col.max.z + r) - position.z;
+                    const overlapFront = position.z - (col.min.z - r);
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapBack, overlapFront);
+                    if (minOverlap === overlapLeft) position.x = col.max.x + r;
+                    else if (minOverlap === overlapRight) position.x = col.min.x - r;
+                    else if (minOverlap === overlapBack) position.z = col.max.z + r;
+                    else if (minOverlap === overlapFront) position.z = col.min.z - r;
+                }
+            }
+        });
+
+        return (position.y <= currentGroundY + 0.05);
+    }
+
+    /* =========================================================
        MOVEMENT & STATE MACHINE UPDATES
        ========================================================= */
 
@@ -520,7 +558,8 @@ window.Everworld = (function () {
         if (keys.left) inputDir.sub(right);
         if (inputDir.lengthSq() > 0) inputDir.normalize();
 
-        const isGrounded = (position.y <= 0.05);
+        // Check Dynamic Grounding & Resolves Collisions
+        const isGrounded = checkGroundAndCollisions();
 
         if (isGrounded) {
             canAirDash = true;
@@ -531,7 +570,6 @@ window.Everworld = (function () {
         // ADVANCED MECHANIC: GRAPPLING HOOK
         // ==========================================
         if (grappleTrigger && currentState !== State.GRAPPLING) {
-            // Find closest grapple anchor within range
             let closestAnchor = null;
             let minDist = Config.grappleMaxDistance;
 
@@ -557,13 +595,11 @@ window.Everworld = (function () {
                 currentState = State.AIRBORNE;
                 if (grappleLine) grappleLine.visible = false;
             } else {
-                // Pull player toward grapple point
                 const pullDir = grapplePoint.clone().sub(position).normalize();
                 velocity.x += pullDir.x * Config.grapplePullForce * dt;
                 velocity.y += pullDir.y * Config.grapplePullForce * dt;
                 velocity.z += pullDir.z * Config.grapplePullForce * dt;
 
-                // Update grapple visual cable line
                 if (grappleLine) {
                     const positions = grappleLine.geometry.attributes.position.array;
                     positions[0] = position.x;
@@ -580,22 +616,19 @@ window.Everworld = (function () {
         }
 
         // ==========================================
-        // ADVANCED MECHANIC: VAULT / MANTLE / LEDGE GRAB
+        // ADVANCED MECHANIC: VAULT / MANTLE
         // ==========================================
         if ((currentState === State.GROUNDED || currentState === State.AIRBORNE) && inputDir.lengthSq() > 0) {
-            // Check vault obstacles ahead
             vaultables.forEach(v => {
                 const dist = position.distanceTo(new THREE.Vector3(v.x, position.y, v.z));
                 if (dist < 1.8 && Math.abs(position.y - v.y) < 1.5) {
-                    // Vault over low obstacle!
                     currentState = State.VAULTING;
                     mantleStartPos.copy(position);
-                    mantleTargetPos.set(position.x + inputDir.x * 2.5, v.y + v.h / 2 + 0.9, position.z + inputDir.z * 2.5);
+                    mantleTargetPos.set(position.x + inputDir.x * 2.5, v.y + v.h / 2 + 0.1, position.z + inputDir.z * 2.5);
                     mantleTimer = 0;
                 }
             });
 
-            // Check mantle / ledge obstacles ahead
             if (currentState !== State.VAULTING) {
                 mantlables.forEach(m => {
                     const dist = position.distanceTo(new THREE.Vector3(m.x, position.y, m.z));
@@ -603,7 +636,7 @@ window.Everworld = (function () {
                         if (spaceTrigger || keys.forward) {
                             currentState = State.MANTLING;
                             mantleStartPos.copy(position);
-                            mantleTargetPos.set(m.x, m.y + m.h / 2 + 0.9, m.z);
+                            mantleTargetPos.set(m.x, m.y + m.h / 2 + 0.1, m.z);
                             mantleTimer = 0;
                         }
                     }
@@ -642,7 +675,6 @@ window.Everworld = (function () {
             velocity.z = wallRunDirection.z * Config.wallRunSpeed;
             velocity.y = -Config.wallRunGravity;
 
-            // Wall Jump off wall!
             if (spaceTrigger) {
                 currentState = State.AIRBORNE;
                 velocity.y = Config.wallJumpUpImpulse;
@@ -655,9 +687,15 @@ window.Everworld = (function () {
         // ==========================================
         // STATE: SLIDING (Exact Spec Mechanics)
         // ==========================================
+        // Requirement:
+        // - Initial speed is EXACTLY 20 units/second immediately when sliding begins.
+        // - Do NOT subtract deceleration before the initial 20 u/s velocity has been applied.
+        // - Decelerate smoothly to exactly 0 without negative speed.
+        // - Holding Ctrl must NOT repeatedly reset slide speed.
         if (isGrounded && ctrlTrigger && currentState !== State.SLIDING) {
             currentState = State.SLIDING;
             slideSpeed = Config.slideInitialSpeed; // EXACTLY 20.0 u/s
+            slideJustStarted = true;
 
             if (inputDir.lengthSq() > 0) {
                 slideDirection.copy(inputDir);
@@ -667,8 +705,14 @@ window.Everworld = (function () {
         }
 
         if (currentState === State.SLIDING) {
-            // Gradually decrease slide speed down to exactly 0
-            slideSpeed = Math.max(0, slideSpeed - Config.slideDeceleration * dt);
+            if (slideJustStarted) {
+                // Initial frame applies full 20.0 u/s velocity BEFORE subtracting deceleration
+                slideSpeed = Config.slideInitialSpeed;
+                slideJustStarted = false;
+            } else {
+                // Gradually decrease slide speed down to exactly 0
+                slideSpeed = Math.max(0, slideSpeed - Config.slideDeceleration * dt);
+            }
 
             velocity.x = slideDirection.x * slideSpeed;
             velocity.z = slideDirection.z * slideSpeed;
@@ -758,16 +802,16 @@ window.Everworld = (function () {
         position.y += velocity.y * dt;
         position.z += velocity.z * dt;
 
-        // Ground Constraint
-        if (position.y < 0) {
-            position.y = 0;
+        // Ground Floor / Platform Landing Constraint
+        if (position.y < currentGroundY) {
+            position.y = currentGroundY;
             velocity.y = 0;
             if (currentState === State.AIRBORNE || currentState === State.AIR_DASHING) {
                 currentState = State.GROUNDED;
             }
         }
 
-        // Update player mesh rotation & position
+        // Update player mesh
         if (playerMesh) {
             playerMesh.position.copy(position);
 
@@ -828,8 +872,9 @@ window.Everworld = (function () {
 
     function updateHUD() {
         if (speedometerEl) {
-            const currentSpeed = velocity.length();
-            speedometerEl.textContent = currentSpeed.toFixed(2);
+            // Measure actual horizontal speed
+            const horizSpeed = Math.hypot(velocity.x, velocity.z);
+            speedometerEl.textContent = horizSpeed.toFixed(2);
         }
 
         if (stateBadgeEl) {
@@ -855,7 +900,7 @@ window.Everworld = (function () {
         requestAnimationFrame(animate);
         deltaTime = Math.min(clock.getDelta(), 0.1);
 
-        // Update movement & physics
+        // Update physics & movement
         updateMovement(deltaTime);
 
         // Update camera
@@ -872,11 +917,22 @@ window.Everworld = (function () {
     return {
         init: init,
         getState: () => currentState,
-        getSpeed: () => velocity.length(),
+        getSpeed: () => Math.hypot(velocity.x, velocity.z),
+        getVelocity: () => velocity.clone(),
         getConfig: () => Config,
         getPosition: () => position.clone(),
         setState: (s) => { currentState = s; },
         setVelocity: (v) => { velocity.copy(v); },
-        setSlideSpeed: (s) => { slideSpeed = s; }
+        setSlideSpeed: (s) => { slideSpeed = s; },
+        startSlideTest: () => {
+            currentState = State.SLIDING;
+            slideSpeed = Config.slideInitialSpeed;
+            slideJustStarted = true;
+            slideDirection.set(0, 0, 1);
+            velocity.set(0, 0, Config.slideInitialSpeed);
+        },
+        updateMovementForTest: (dt) => {
+            updateMovement(dt);
+        }
     };
 })();
